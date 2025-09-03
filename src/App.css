@@ -201,6 +201,40 @@ input[type="file"]::-webkit-file-upload-button:active {
   background: #fff7db;
 }
 
+/* Pagination Styles */
+.form-navigation {
+  flex-direction: row;
+  gap: 2rem;
+  justify-content: center;
+}
+
+.form-navigation button {
+  flex: 0 0 auto;
+  transition: all 0.3s ease;
+}
+
+.form-navigation button:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.page-dots {
+  background-color: #f3f4f6;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.page-dots button {
+  transition: all 0.3s ease;
+}
+
+.page-dots button:hover {
+  transform: scale(1.2);
+}
+
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
   #root {
@@ -448,4 +482,32 @@ input[type="file"]::-webkit-file-upload-button:active {
 }
 .react-datepicker__close-icon:hover::after {
   background-color: var(--brand-gold-600) !important;
+}
+
+/* Mobile pagination styles */
+@media (max-width: 768px) {
+  .form-navigation {
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+    padding: 0.5rem 0;
+  }
+
+  .form-navigation button {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto;
+    font-size: 18px;
+  }
+
+  .page-dots {
+    order: -1;
+    margin-bottom: 0.5rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .page-dots button {
+    width: 6px;
+    height: 6px;
+  }
 }

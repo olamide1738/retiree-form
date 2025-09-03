@@ -11,6 +11,10 @@ import Dashboard from './components/Dashboard'
 import LogoHeader from './components/LogoHeader'
 
 function App() {
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const totalPages = 6
+
   const [personalInfo, setPersonalInfo] = useState({
     fullName: '',
     dateOfBirth: '',
@@ -68,6 +72,25 @@ function App() {
   })
 
   const [showDashboard, setShowDashboard] = useState(false)
+
+  // Navigation functions
+  const nextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1)
+    }
+  }
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1)
+    }
+  }
+
+  const goToPage = (page) => {
+    if (page >= 1 && page <= totalPages) {
+      setCurrentPage(page)
+    }
+  }
 
   function handlePersonalChange(event) {
     const { name, value } = event.target
@@ -217,25 +240,153 @@ function App() {
       {showDashboard ? (
         <Dashboard />
       ) : (
-      <form onSubmit={handleSubmit} className="form">
-        <PersonalInfoSection values={personalInfo} onChange={handlePersonalChange} />
-        <EmploymentInfoSection values={employmentInfo} onChange={handleEmploymentChange} />
-        <PensionBenefitsSection values={pensionBenefits} onChange={handlePensionChange} />
-        <VerificationDocumentsSection
-          values={verificationDocs}
-          onChange={handleVerificationChange}
-          onFileChange={handleVerificationFileChange}
-        />
-        <DeclarationConsentSection
-          values={declarationValues}
-          onChange={handleDeclarationChange}
-          onFileChange={handleDeclarationFileChange}
-        />
-        <OptionalQuestionsSection values={optionalQuestions} onChange={handleOptionalChange} />
-        <div className="actions">
-          <button type="submit">Submit</button>
+        <div>
+          <form onSubmit={handleSubmit} className="form">
+            {/* Page 1: Personal Information */}
+            {currentPage === 1 && (
+              <PersonalInfoSection values={personalInfo} onChange={handlePersonalChange} />
+            )}
+
+            {/* Page 2: Employment Information */}
+            {currentPage === 2 && (
+              <EmploymentInfoSection values={employmentInfo} onChange={handleEmploymentChange} />
+            )}
+
+            {/* Page 3: Pension Benefits */}
+            {currentPage === 3 && (
+              <PensionBenefitsSection values={pensionBenefits} onChange={handlePensionChange} />
+            )}
+
+            {/* Page 4: Verification Documents */}
+            {currentPage === 4 && (
+              <VerificationDocumentsSection
+                values={verificationDocs}
+                onChange={handleVerificationChange}
+                onFileChange={handleVerificationFileChange}
+              />
+            )}
+
+            {/* Page 5: Declaration/Consent */}
+            {currentPage === 5 && (
+              <DeclarationConsentSection
+                values={declarationValues}
+                onChange={handleDeclarationChange}
+                onFileChange={handleDeclarationFileChange}
+              />
+            )}
+
+            {/* Page 6: Optional Questions */}
+            {currentPage === 6 && (
+              <OptionalQuestionsSection values={optionalQuestions} onChange={handleOptionalChange} />
+            )}
+
+            {/* Navigation Buttons with Pagination */}
+            <div className="form-navigation" style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginTop: '2rem',
+              padding: '1rem 0',
+              gap: '2rem'
+            }}>
+              {/* Previous Button */}
+              <button
+                type="button"
+                onClick={prevPage}
+                disabled={currentPage === 1}
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  backgroundColor: currentPage === 1 ? '#e5e7eb' : '#f3f4f6',
+                  color: currentPage === 1 ? '#9ca3af' : '#374151',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '16px',
+                  transition: 'all 0.3s ease',
+                  opacity: currentPage === 1 ? 0.5 : 1
+                }}
+              >
+                ←
+              </button>
+
+              {/* Pagination Dots */}
+              <div className="page-dots" style={{ 
+                display: 'flex', 
+                gap: '0.5rem',
+                alignItems: 'center',
+                backgroundColor: '#f3f4f6',
+                padding: '0.5rem 1rem',
+                borderRadius: '20px',
+               
+              }}>
+                {Array.from({ length: totalPages }, (_, i) => (
+                  <button
+                    key={i + 1}
+                    onClick={() => goToPage(i + 1)}
+                    style={{
+                      width: '5px',
+                      height: '5px',
+                      borderRadius: '50%',
+                      border: 'none',
+                      backgroundColor: currentPage === i + 1 ? '#000000' : '#9ca3af',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s ease',
+                      padding: "0px"
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* Next/Submit Button */}
+              {currentPage === totalPages ? (
+                <button
+                  type="submit"
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    border: 'none',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  ✓
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={nextPage}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    border: 'none',
+                    backgroundColor: '#f3f4f6',
+                    color: '#374151',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  →
+                </button>
+              )}
+            </div>
+          </form>
         </div>
-      </form>
       )}
     </div>
   )
