@@ -1,14 +1,12 @@
-import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
-import pkg from 'pg'
+import mysql from 'mysql2/promise'
 import ExcelJS from 'exceljs'
 import PDFDocument from 'pdfkit'
 
-const { Pool } = pkg
 const app = express()
 app.use(cors())
 app.use(express.json())
@@ -34,32 +32,31 @@ const storage = multer.diskStorage({
 })
 const upload = multer({ storage })
 
-// PostgreSQL connection
-let pool
+// MySQL connection
+let db
 const initDB = async () => {
   try {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL || process.env.DB_URL,
+    db = await mysql.createConnection({
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'retiree_form',
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
     })
 
-    // Test connection
-    const client = await pool.connect()
-    console.log('Connected to PostgreSQL database')
-    
     // Create tables if they don't exist
-    await client.query(`
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS submissions (
-        id SERIAL PRIMARY KEY,
+        id INT AUTO_INCREMENT PRIMARY KEY,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         data_json TEXT NOT NULL
       )
     `)
     
-    await client.query(`
+    await db.execute(`
       CREATE TABLE IF NOT EXISTS files (
-        id SERIAL PRIMARY KEY,
-        submission_id INTEGER NOT NULL,
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        submission_id INT NOT NULL,
         field_name VARCHAR(255) NOT NULL,
         original_name VARCHAR(255) NOT NULL,
         stored_path TEXT NOT NULL,
@@ -67,8 +64,7 @@ const initDB = async () => {
       )
     `)
     
-    client.release()
-    console.log('Database tables created/verified')
+    console.log('Database connected and tables created')
   } catch (error) {
     console.error('Database connection failed:', error)
     process.exit(1)
@@ -81,11 +77,11 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }))
 // List submissions with files metadata
 app.get('/api/submissions', async (_req, res) => {
   try {
-    const result = await pool.query(`
+    const [submissions] = await db.execute(`
       SELECT s.id, s.created_at, s.data_json,
              COALESCE(
-               (SELECT JSON_AGG(
-                 JSON_BUILD_OBJECT(
+               (SELECT JSON_ARRAYAGG(
+                 JSON_OBJECT(
                    'id', f.id,
                    'field', f.field_name,
                    'original', f.original_name,
@@ -93,20 +89,20 @@ app.get('/api/submissions', async (_req, res) => {
                  )
                )
                FROM files f WHERE f.submission_id = s.id),
-               '[]'::json
+               JSON_ARRAY()
              ) AS files
       FROM submissions s 
       ORDER BY s.id DESC
     `)
     
-    const submissions = result.rows.map(r => ({
+    const result = submissions.map(r => ({
       id: r.id,
       createdAt: r.created_at,
       data: JSON.parse(r.data_json || '{}'),
-      files: r.files || []
+      files: r.files ? JSON.parse(r.files) : []
     }))
     
-    res.json(submissions)
+    res.json(result)
   } catch (error) {
     console.error('Error fetching submissions:', error)
     res.status(500).json({ error: 'Failed to load submissions' })
@@ -116,16 +112,16 @@ app.get('/api/submissions', async (_req, res) => {
 // Download a specific uploaded file
 app.get('/api/files/:id', async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT original_name, stored_path FROM files WHERE id = $1',
+    const [files] = await db.execute(
+      'SELECT original_name, stored_path FROM files WHERE id = ?',
       [req.params.id]
     )
     
-    if (result.rows.length === 0) {
+    if (files.length === 0) {
       return res.status(404).json({ error: 'File not found' })
     }
     
-    const file = result.rows[0]
+    const file = files[0]
     const absolutePath = path.resolve(file.stored_path)
     
     if (!fs.existsSync(absolutePath)) {
@@ -145,13 +141,13 @@ app.delete('/api/submissions/:id', async (req, res) => {
     const submissionId = req.params.id
     
     // Get files to delete from disk
-    const filesResult = await pool.query(
-      'SELECT stored_path FROM files WHERE submission_id = $1',
+    const [files] = await db.execute(
+      'SELECT stored_path FROM files WHERE submission_id = ?',
       [submissionId]
     )
     
     // Delete physical files
-    filesResult.rows.forEach(file => {
+    files.forEach(file => {
       const absolutePath = path.resolve(file.stored_path)
       if (fs.existsSync(absolutePath)) {
         try {
@@ -163,12 +159,12 @@ app.delete('/api/submissions/:id', async (req, res) => {
     })
     
     // Delete from database (files will be deleted due to foreign key constraint)
-    const result = await pool.query(
-      'DELETE FROM submissions WHERE id = $1',
+    const [result] = await db.execute(
+      'DELETE FROM submissions WHERE id = ?',
       [submissionId]
     )
     
-    if (result.rowCount === 0) {
+    if (result.affectedRows === 0) {
       return res.status(404).json({ error: 'Submission not found' })
     }
     
@@ -183,10 +179,10 @@ app.delete('/api/submissions/:id', async (req, res) => {
 app.delete('/api/submissions', async (req, res) => {
   try {
     // Get all files to delete from disk
-    const filesResult = await pool.query('SELECT stored_path FROM files')
+    const [files] = await db.execute('SELECT stored_path FROM files')
     
     // Delete all physical files
-    filesResult.rows.forEach(file => {
+    files.forEach(file => {
       const absolutePath = path.resolve(file.stored_path)
       if (fs.existsSync(absolutePath)) {
         try {
@@ -198,8 +194,8 @@ app.delete('/api/submissions', async (req, res) => {
     })
     
     // Clear database tables
-    await pool.query('DELETE FROM files')
-    await pool.query('DELETE FROM submissions')
+    await db.execute('DELETE FROM files')
+    await db.execute('DELETE FROM submissions')
     
     res.json({ success: true, message: 'All submissions cleared' })
   } catch (error) {
@@ -224,12 +220,12 @@ app.post('/api/submissions', upload.fields(fileFields), async (req, res) => {
     const createdAt = new Date().toISOString()
 
     // Insert submission
-    const result = await pool.query(
-      'INSERT INTO submissions (created_at, data_json) VALUES ($1, $2) RETURNING id',
+    const [result] = await db.execute(
+      'INSERT INTO submissions (created_at, data_json) VALUES (?, ?)',
       [createdAt, JSON.stringify(body)]
     )
     
-    const submissionId = result.rows[0].id
+    const submissionId = result.insertId
 
     // Insert files metadata
     const files = req.files || {}
@@ -242,12 +238,10 @@ app.post('/api/submissions', upload.fields(fileFields), async (req, res) => {
     })
 
     if (fileInserts.length > 0) {
-      const placeholders = fileInserts.map((_, i) => 
-        `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`
-      ).join(',')
+      const placeholders = fileInserts.map(() => '(?, ?, ?, ?)').join(',')
       const flat = fileInserts.flat()
       
-      await pool.query(
+      await db.execute(
         `INSERT INTO files (submission_id, field_name, original_name, stored_path) VALUES ${placeholders}`,
         flat
       )
@@ -263,11 +257,11 @@ app.post('/api/submissions', upload.fields(fileFields), async (req, res) => {
 // Export to Excel
 app.get('/api/submissions/export', async (_req, res) => {
   try {
-    const submissionsResult = await pool.query('SELECT * FROM submissions ORDER BY id DESC')
-    const filesResult = await pool.query('SELECT * FROM files')
+    const [submissions] = await db.execute('SELECT * FROM submissions ORDER BY id DESC')
+    const [files] = await db.execute('SELECT * FROM files')
     
     const filesBySubmission = {}
-    filesResult.rows.forEach(f => {
+    files.forEach(f => {
       if (!filesBySubmission[f.submission_id]) filesBySubmission[f.submission_id] = []
       filesBySubmission[f.submission_id].push(f)
     })
@@ -324,7 +318,7 @@ app.get('/api/submissions/export', async (_req, res) => {
       width: Math.max(18, header.length + 2) 
     }))
 
-    submissionsResult.rows.forEach((row) => {
+    submissions.forEach((row) => {
       const data = JSON.parse(row.data_json || '{}')
       const record = { id: row.id, created_at: row.created_at }
       headers.slice(2).forEach(([, key]) => { 
@@ -362,11 +356,11 @@ app.get('/api/submissions/export', async (_req, res) => {
 // Export to PDF
 app.get('/api/submissions/export.pdf', async (_req, res) => {
   try {
-    const submissionsResult = await pool.query('SELECT * FROM submissions ORDER BY id DESC')
-    const filesResult = await pool.query('SELECT * FROM files')
+    const [submissions] = await db.execute('SELECT * FROM submissions ORDER BY id DESC')
+    const [files] = await db.execute('SELECT * FROM files')
     
     const filesBySubmission = {}
-    filesResult.rows.forEach(f => {
+    files.forEach(f => {
       if (!filesBySubmission[f.submission_id]) filesBySubmission[f.submission_id] = []
       filesBySubmission[f.submission_id].push(f)
     })
@@ -380,7 +374,7 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
     doc.fontSize(16).text('Submissions Report', { align: 'center' })
     doc.moveDown()
 
-    submissionsResult.rows.forEach((row, index) => {
+    submissions.forEach((row, index) => {
       const data = JSON.parse(row.data_json || '{}')
       doc.fontSize(12).text(`Submission #${row.id} — ${row.created_at}`)
       const entries = Object.entries(data)
@@ -400,7 +394,7 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
         })
       }
 
-      if (index < submissionsResult.rows.length - 1) {
+      if (index < submissions.length - 1) {
         doc.moveDown()
         doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke()
         doc.moveDown()

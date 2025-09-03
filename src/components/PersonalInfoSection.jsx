@@ -68,14 +68,13 @@ export default function PersonalInfoSection({ values, onChange }) {
         <label>
           <span>Phone Number</span>
           <input
-            type="number"
+            type="text"
             inputMode="numeric"
             pattern="[0-9]*"
             name="phoneNumber"
             value={values.phoneNumber}
             onChange={onChange}
             required
-            min="0"
           />
         </label>
 
@@ -104,14 +103,13 @@ export default function PersonalInfoSection({ values, onChange }) {
         <label>
           <span>Next of Kin Phone Number</span>
           <input
-            type="number"
+            type="text"
             inputMode="numeric"
             pattern="[0-9]*"
             name="nextOfKinPhone"
             value={values.nextOfKinPhone}
             onChange={onChange}
             required
-            min="0"
           />
         </label>
       </div>

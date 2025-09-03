@@ -29,14 +29,13 @@ export default function PensionBenefitsSection({ values, onChange }) {
         <label>
           <span>Account Number</span>
           <input
-            type="number"
+            type="text"
             inputMode="numeric"
             pattern="[0-9]*"
             name="accountNumber"
             value={values.accountNumber}
             onChange={onChange}
             required
-            min="0"
           />
         </label>
 

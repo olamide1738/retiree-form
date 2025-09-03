@@ -29,14 +29,15 @@ export default function VerificationDocumentsSection({ values, onFileChange, onC
         <label>
           <span>Bank Verification Number (BVN)</span>
           <input
-            type="number"
+            type="text"
             inputMode="numeric"
-            pattern="[0-9]*"
+            pattern="[0-9]{11}"
             name="bvn"
             value={values.bvn}
             onChange={onChange}
             required
-            min="0"
+            maxLength="11"
+            minLength="11"
           />
         </label>
 

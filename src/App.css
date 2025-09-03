@@ -201,9 +201,200 @@ input[type="file"]::-webkit-file-upload-button:active {
   background: #fff7db;
 }
 
-@media (max-width: 640px) {
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  #root {
+    padding: 1.5rem 1rem;
+  }
+  
+  .container h1 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .container h1::after {
+    width: 80px;
+    margin: 0.25rem auto 1rem auto;
+  }
+  
+  .section {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .section:first-of-type {
+    margin-top: 2rem;
+  }
+  
+  .section legend {
+    font-size: 1rem;
+  }
+  
   .grid {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .button, button[type="button"], button[type="submit"] {
+    width: 100%;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+  }
+  
+  input, select, textarea {
+    padding: 0.75rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  input[type="file"]::file-selector-button,
+  input[type="file"]::-webkit-file-upload-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  #root {
+    padding: 1rem 1rem;
+  }
+  
+  .container h1 {
+    font-size: 1.25rem;
+  }
+  
+  .section {
+    padding: 0.5rem;
+    border-radius: 8px;
+  }
+  
+  .section:first-of-type {
+    margin-top: 1.5rem;
+  }
+  
+  .section legend {
+    font-size: 0.9rem;
+  }
+  
+  label span {
+    font-size: 0.85rem;
+  }
+  
+  input, select, textarea {
+    padding: 0.5rem;
+    font-size: 16px;
+  }
+}
+
+/* Dashboard mobile styles */
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 1rem !important;
+  }
+  
+  .dashboard-actions {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+  
+  .dashboard-actions a,
+  .dashboard-actions button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 8px 16px !important;
+    font-size: 0.9rem !important;
+    text-align: center !important;
+    display: flex !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+  }
+  
+  .dashboard-table {
+    font-size: 0.7rem !important;
+    min-width: 500px !important;
+  }
+  
+  .dashboard-table th,
+  .dashboard-table td {
+    padding: 4px 6px !important;
+    font-size: 0.7rem !important;
+    max-width: 100px !important;
+    word-break: break-word !important;
+  }
+  
+  .dashboard-header h2 {
+    text-align: center !important;
+    width: 100% !important;
+    margin-top: 1rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .dashboard-table th:first-child,
+  .dashboard-table td:first-child {
+    position: sticky !important;
+    left: 0 !important;
+    background: white !important;
+    z-index: 1 !important;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1) !important;
+  }
+  
+  /* Make table scroll area more mobile-friendly */
+  .dashboard-table-container {
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+  }
+  
+  /* Login form mobile styles */
+  .login-form-container {
+    padding: 20px !important;
+    margin: 10px !important;
+  }
+  
+  .login-form-container h2 {
+    font-size: 1.5rem !important;
+    margin-bottom: 20px !important;
+  }
+  
+  .login-form-container input {
+    padding: 12px !important;
+    font-size: 16px !important;
+  }
+  
+  .login-form-container button {
+    padding: 12px !important;
+    font-size: 16px !important;
+  }
+}
+
+/* Additional mobile styles for very small screens */
+@media (max-width: 480px) {
+  .dashboard-actions {
+    gap: 0.75rem !important;
+  }
+  
+  .dashboard-actions a,
+  .dashboard-actions button {
+    padding: 8px 16px !important;
+    font-size: 1rem !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+  }
+  
+  .dashboard-header h2 {
+    font-size: 1.25rem !important;
+    margin-bottom: 0.5rem !important;
+    margin-top: 1.5rem !important;
+    text-align: center !important;
+    width: 100% !important;
   }
 }
 

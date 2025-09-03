@@ -141,7 +141,7 @@ function App() {
     if (declarationFiles.witnessSignature) formData.append('witnessSignature', declarationFiles.witnessSignature)
 
     try {
-      const res = await fetch('http://localhost:4000/api/submissions', {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/submissions`, {
         method: 'POST',
         body: formData
       })
@@ -233,10 +233,6 @@ function App() {
         />
         <OptionalQuestionsSection values={optionalQuestions} onChange={handleOptionalChange} />
         <div className="actions">
-          <div style={{ display: 'flex', gap: '.5rem' }}>
-            <a className="button" href="http://localhost:4000/api/submissions/export" target="_blank" rel="noreferrer">Export to Excel</a>
-            <a className="button" href="http://localhost:4000/api/submissions/export.pdf" target="_blank" rel="noreferrer">Export to PDF</a>
-          </div>
           <button type="submit">Submit</button>
         </div>
       </form>

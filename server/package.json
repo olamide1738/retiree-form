@@ -9,12 +9,11 @@
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
     "exceljs": "^4.4.0",
     "express": "^4.19.2",
-    "pdfkit": "^0.15.0",
     "multer": "^1.4.5-lts.1",
-    "sqlite3": "^5.1.7"
+    "pdfkit": "^0.15.0",
+    "pg": "^8.16.3"
   }
 }
-
-
