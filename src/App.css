@@ -1,0 +1,260 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --gap: 1rem;
+  /* Brand palette inspired by the logo */
+  --brand-brown: #5a4630;
+  --brand-gold: #b08a00;
+  --brand-gold-600: #9a7700;
+  --brand-red: #c62828;
+  --brand-green: #2e7d32;
+  --brand-blue: #1565c0;
+  --surface: #ffffff;
+  --surface-2: #fafaf9;
+  --border: #e2e8f0;
+  --muted: #64748b;
+  --text: #0f172a;
+}
+
+body {
+  background: linear-gradient(180deg, #fff 0%, #fffaf0 100%);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+#root {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.container h1 {
+  font-size: 2rem;
+  margin-bottom: .75rem;
+  text-align: center;
+  color: var(--brand-brown);
+}
+
+.container h1::after {
+  content: "";
+  display: block;
+  height: 4px;
+  width: 120px;
+  margin: .5rem auto 1.25rem auto;
+  background: linear-gradient(90deg, var(--brand-gold) 0%, var(--brand-red) 50%, var(--brand-blue) 100%);
+  border-radius: 999px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.section {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.04);
+}
+
+.section legend {
+  font-weight: 700;
+  padding: 0 .5rem;
+  color: var(--brand-gold-600);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  margin-top: .5rem;
+}
+
+.grid .full {
+  grid-column: 1 / -1;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: .375rem;
+  text-align: left;
+}
+
+label span {
+  font-size: .95rem;
+  color: var(--text);
+}
+
+input, select, textarea {
+  appearance: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  font-size: 1rem;
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+input::placeholder, textarea::placeholder {
+  color: #475569;
+}
+
+textarea { resize: vertical; }
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 3px rgba(176, 138, 0, 0.15);
+}
+
+/* File upload button styles */
+input[type="file"] {
+  background: var(--surface-2);
+}
+
+input[type="file"]::file-selector-button {
+  background: var(--brand-gold);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: .55rem .9rem;
+  font-size: .95rem;
+  cursor: pointer;
+  margin-right: .75rem;
+  transition: transform .05s ease, background-color .2s ease, box-shadow .2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: var(--brand-gold-600);
+}
+
+input[type="file"]::file-selector-button:active {
+  transform: translateY(1px);
+}
+
+/* Safari/older Chromium fallback */
+input[type="file"]::-webkit-file-upload-button {
+  background: var(--brand-gold);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: .55rem .9rem;
+  font-size: .95rem;
+  cursor: pointer;
+  margin-right: .75rem;
+  transition: transform .05s ease, background-color .2s ease, box-shadow .2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+input[type="file"]::-webkit-file-upload-button:hover {
+  background: var(--brand-gold-600);
+}
+
+input[type="file"]::-webkit-file-upload-button:active {
+  transform: translateY(1px);
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.button, button[type="button"], button[type="submit"] {
+  background: var(--brand-gold);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: .65rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  transition: transform .05s ease, background-color .2s ease, box-shadow .2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.button:hover, .button:focus, .button:visited { color: #fff; text-decoration: none; }
+
+.button:hover, button[type="button"]:hover, button[type="submit"]:hover {
+  background: var(--brand-gold-600);
+  color: #fff;
+}
+
+.button:active, button[type="button"]:active, button[type="submit"]:active {
+  transform: translateY(1px);
+}
+
+.button.secondary {
+  background: #fff;
+  color: var(--brand-brown);
+  border: 1px solid var(--border);
+}
+
+.button.secondary:hover {
+  background: #fff7db;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Dashboard file links use gold accent */
+.file-link {
+  color: var(--brand-gold);
+  text-decoration: none;
+}
+.file-link:hover, .file-link:focus {
+  color: var(--brand-gold-600);
+  text-decoration: underline;
+}
+
+/* React DatePicker header spacing tweaks */
+.react-datepicker {
+  font-family: inherit;
+}
+.react-datepicker__header {
+  padding-top: .75rem;
+  padding-bottom: .5rem;
+}
+.react-datepicker__current-month {
+  margin-bottom: .5rem;
+}
+.react-datepicker__header .react-datepicker__month-dropdown-container,
+.react-datepicker__header .react-datepicker__year-dropdown-container {
+  display: inline-block;
+  margin: 0 .5rem;
+}
+.react-datepicker__month-select,
+.react-datepicker__year-select {
+  padding: .4rem .6rem;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+}
+.react-datepicker__navigation {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  top: 10px;
+}
+
+/* React DatePicker clear (cancel) button - remove default blue and match theme */
+.react-datepicker__close-icon { outline: none !important; box-shadow: none !important; }
+.react-datepicker__close-icon:focus { outline: none !important; box-shadow: none !important; }
+.react-datepicker__close-icon::after {
+  background-color: var(--brand-gold) !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.react-datepicker__close-icon:hover::after {
+  background-color: var(--brand-gold-600) !important;
+}
