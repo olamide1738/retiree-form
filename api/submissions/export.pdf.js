@@ -165,7 +165,7 @@ export default async function handler(req, res) {
           { key: 'pensionPaymentMode', label: 'Payment Mode' },
           { key: 'bvn', label: 'BVN' }
         ]
-        createSection('PENSION INFO', pensionFields, rightColumnX, doc.y, columnWidth, sectionHeight)
+        createSection('PENSION INFO', pensionFields, rightColumnX, currentY - sectionHeight - 10, columnWidth, sectionHeight)
       }
 
       // Row 2: Employment Information (Left) & Next of Kin (Right)
@@ -190,71 +190,48 @@ export default async function handler(req, res) {
         createSection('NEXT OF KIN', nextOfKinFields, rightColumnX, currentY - sectionHeight - 10, columnWidth, sectionHeight)
       }
 
-      // Files Section with Images (Full Width)
+      // Row 3: Attached Documents (Left) & Additional Information (Right)
       const submissionFiles = filesBySubmission[row.id] || []
       if (submissionFiles.length) {
-        doc.moveDown(1)
-        doc.fontSize(11)
-          .font('Helvetica-Bold')
+        // Create Attached Documents section
+        const documentsY = currentY
+        doc.rect(leftColumnX, documentsY, columnWidth, sectionHeight)
           .fillColor('#B8860B')
-          .text('ATTACHED DOCUMENTS & IMAGES', { underline: true })
+          .fill()
+        
+        doc.fillColor('white')
+          .fontSize(10)
+          .font('Helvetica-Bold')
+          .text('ATTACHED DOCUMENTS', leftColumnX + 5, documentsY + 5)
         
         doc.fillColor('black')
-        doc.fontSize(9)
+        doc.fontSize(8)
         doc.font('Helvetica')
         
+        let docY = documentsY + 25
         submissionFiles.forEach((f, fileIndex) => {
-          const fileUrl = `${req.headers.host}/api/files/${f.id}`
-          doc.text(`• ${f.field_name}: ${f.original_name}`, { indent: 20 })
-          doc.fontSize(8)
-            .fillColor('#1565c0')
-            .text(`  Download: ${fileUrl}`, { indent: 20 })
-          doc.fillColor('black')
-          
-          // Add image if it's a signature or photo
-          if (f.field_name.includes('Signature') || f.field_name.includes('Photo')) {
-            try {
-              // Decode base64 image and add to PDF
-              const base64Data = f.stored_path
-              const imageBuffer = Buffer.from(base64Data, 'base64')
-              
-              // Add image with small size
-              doc.image(imageBuffer, 60, doc.y + 5, { 
-                width: 100, 
-                height: 60,
-                fit: [100, 60]
-              })
-              doc.moveDown(1)
-            } catch (imgError) {
-              console.log('Could not add image to PDF:', imgError.message)
-              doc.text(`  [Image: ${f.original_name}]`, { indent: 20 })
-            }
+          if (docY < documentsY + sectionHeight - 10) {
+            const fileUrl = `https://${req.headers.host}/api/files/${f.id}`
+            doc.text(`• ${f.field_name}:`, leftColumnX + 5, docY)
+            doc.fontSize(7)
+              .fillColor('#1565c0')
+              .text(`${f.original_name}`, leftColumnX + 5, docY + 8)
+            doc.fontSize(6)
+              .text(`Download: ${fileUrl}`, leftColumnX + 5, docY + 16)
+            doc.fillColor('black')
+            docY += 25
           }
         })
-        doc.moveDown(0.5)
       }
 
-      // Additional Information (Full Width)
+      // Additional Information (Right side of Row 3)
       if (data.preferredCommunication || data.healthStatus || data.additionalComments) {
-        doc.fontSize(11)
-          .font('Helvetica-Bold')
-          .fillColor('#B8860B')
-          .text('ADDITIONAL INFORMATION', { underline: true })
-        
-        doc.fillColor('black')
-        doc.fontSize(9)
-        doc.font('Helvetica')
-        
-        if (data.preferredCommunication) {
-          doc.text(`Preferred Communication: ${data.preferredCommunication}`, { indent: 20 })
-        }
-        if (data.healthStatus) {
-          doc.text(`Health Status: ${data.healthStatus}`, { indent: 20 })
-        }
-        if (data.additionalComments) {
-          doc.text(`Additional Comments: ${data.additionalComments}`, { indent: 20 })
-        }
-        doc.moveDown(0.5)
+        const additionalFields = [
+          { key: 'preferredCommunication', label: 'Preferred Communication' },
+          { key: 'healthStatus', label: 'Health Status' },
+          { key: 'additionalComments', label: 'Additional Comments' }
+        ]
+        createSection('ADDITIONAL INFO', additionalFields, rightColumnX, currentY, columnWidth, sectionHeight)
       }
 
       // Page break between submissions (except for the last one)
