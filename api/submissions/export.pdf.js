@@ -214,9 +214,10 @@ export default async function handler(req, res) {
             const fileUrl = `https://${req.headers.host}/api/files/${f.id}`
             doc.text(`• ${f.field_name}:`, leftColumnX + 5, docY)
             doc.fontSize(7)
-              .fillColor('#1565c0')
+              .fillColor('#8B4513') // Dark brown color that complements gold
               .text(`${f.original_name}`, leftColumnX + 5, docY + 8)
             doc.fontSize(6)
+              .fillColor('#A0522D') // Slightly lighter brown for download links
               .text(`Download: ${fileUrl}`, leftColumnX + 5, docY + 16)
             doc.fillColor('black')
             docY += 25
@@ -226,12 +227,43 @@ export default async function handler(req, res) {
 
       // Additional Information (Right side of Row 3)
       if (data.preferredCommunication || data.healthStatus || data.additionalComments) {
+        // Create Additional Info section manually for better spacing
+        const additionalY = currentY
+        doc.rect(rightColumnX, additionalY, columnWidth, sectionHeight)
+          .fillColor('#B8860B')
+          .fill()
+        
+        doc.fillColor('white')
+          .fontSize(10)
+          .font('Helvetica-Bold')
+          .text('ADDITIONAL INFO', rightColumnX + 5, additionalY + 5)
+        
+        doc.fillColor('black')
+        doc.fontSize(8)
+        doc.font('Helvetica')
+        
+        let infoY = additionalY + 25
         const additionalFields = [
           { key: 'preferredCommunication', label: 'Preferred Communication' },
           { key: 'healthStatus', label: 'Health Status' },
           { key: 'additionalComments', label: 'Additional Comments' }
         ]
-        createSection('ADDITIONAL INFO', additionalFields, rightColumnX, currentY, columnWidth, sectionHeight)
+        
+        additionalFields.forEach(field => {
+          if (data[field.key] && infoY < additionalY + sectionHeight - 10) {
+            const label = field.label + ':'
+            const value = String(data[field.key])
+            
+            // Truncate long values
+            const maxValueLength = 20
+            const truncatedValue = value.length > maxValueLength ? 
+              value.substring(0, maxValueLength) + '...' : value
+            
+            doc.text(`${label}`, rightColumnX + 5, infoY)
+            doc.text(truncatedValue, rightColumnX + 5, infoY + 12)
+            infoY += 24 // More spacing between fields
+          }
+        })
       }
 
       // Page break between submissions (except for the last one)
