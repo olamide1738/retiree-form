@@ -48,8 +48,26 @@ export default async function handler(req, res) {
     const base64Data = file.stored_path
     const buffer = Buffer.from(base64Data, 'base64')
     
+    // Determine MIME type based on file extension
+    const getMimeType = (filename) => {
+      const ext = filename.toLowerCase().split('.').pop()
+      const mimeTypes = {
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'webp': 'image/webp',
+        'pdf': 'application/pdf',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      }
+      return mimeTypes[ext] || 'application/octet-stream'
+    }
+    
+    const mimeType = getMimeType(file.original_name)
+    
     res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`)
-    res.setHeader('Content-Type', 'application/octet-stream')
+    res.setHeader('Content-Type', mimeType)
     res.send(buffer)
     
   } catch (error) {

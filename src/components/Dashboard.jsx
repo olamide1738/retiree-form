@@ -108,8 +108,50 @@ export default function Dashboard() {
     return <LoginForm onLogin={handleLogin} />
   }
 
-  if (loading) return <p>Loading submissions...</p>
-  if (error) return <p>Error: {error}</p>
+  if (loading) return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '200px',
+      flexDirection: 'column',
+      gap: '1rem'
+    }}>
+      <div style={{
+        width: '40px',
+        height: '40px',
+        border: '4px solid #f3f4f6',
+        borderTop: '4px solid var(--brand-gold)',
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }}></div>
+      <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem' }}>Loading submissions...</p>
+    </div>
+  )
+  if (error) return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '200px',
+      flexDirection: 'column',
+      gap: '1rem'
+    }}>
+      <div style={{
+        width: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        backgroundColor: '#fef2f2',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border: '2px solid #fecaca'
+      }}>
+        <span style={{ color: '#dc2626', fontSize: '20px', fontWeight: 'bold' }}>!</span>
+      </div>
+      <p style={{ margin: 0, color: '#dc2626', fontSize: '0.9rem', textAlign: 'center' }}>Error: {error}</p>
+    </div>
+  )
 
   if (!rows.length) return <p>No submissions yet.</p>
 

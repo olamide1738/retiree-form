@@ -256,8 +256,23 @@ function App() {
       <LogoHeader />
       <h1>Retiree Verification Form</h1>
       <div className="actions" style={{ marginBottom: '1rem' }}>
-        <button type="button" onClick={() => setShowDashboard(false)}>Form</button>
-        <button type="button" onClick={() => setShowDashboard(true)}>Dashboard</button>
+        <button type="button" onClick={() => setShowDashboard(false)} className="nav-button" title="Form">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14,2 14,8 20,8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10,9 9,9 8,9"/>
+          </svg>
+        </button>
+        <button type="button" onClick={() => setShowDashboard(true)} className="nav-button" title="Dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+          </svg>
+        </button>
       </div>
 
       {showDashboard ? (
@@ -320,8 +335,8 @@ function App() {
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
-              marginTop: '2rem',
-              padding: '1rem 0',
+              marginTop: '0.5rem',
+              padding: '0.5rem 0',
               gap: '2rem'
             }}>
               {/* Previous Button */}
@@ -367,7 +382,7 @@ function App() {
                       height: '5px',
                       borderRadius: '50%',
                       border: 'none',
-                      backgroundColor: currentPage === i + 1 ? '#000000' : '#c5ab11',
+                      backgroundColor: currentPage === i + 1 ? '#c5ab11' : '#6b7280',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
                       padding: "0px"

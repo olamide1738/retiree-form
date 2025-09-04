@@ -26,6 +26,7 @@ body {
   max-width: 1000px;
   margin: 0 auto;
   padding: 2rem 0.5rem;
+  width: 100%;
 }
 
 .container h1 {
@@ -105,6 +106,15 @@ body {
   }
 }
 
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* Smooth transitions for all interactive elements */
 .section {
   transition: all 0.3s ease;
@@ -124,6 +134,7 @@ body {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
+  margin-bottom: 2rem;
 }
 
 .section legend {
@@ -135,7 +146,7 @@ body {
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--gap);
+  gap: 1.5rem;
   margin-top: .5rem;
 }
 
@@ -146,7 +157,7 @@ body {
 label {
   display: flex;
   flex-direction: column;
-  gap: .375rem;
+  gap: 0.75rem;
   text-align: left;
 }
 
@@ -237,7 +248,38 @@ input[type="file"]::-webkit-file-upload-button:active {
 .actions {
   display: flex;
   justify-content: space-between;
-  gap: .75rem;
+  margin-bottom: 2rem;
+}
+
+.nav-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: none;
+  background: var(--brand-gold);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(176, 138, 0, 0.3);
+}
+
+.nav-button:hover {
+  background: var(--brand-gold-600);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(176, 138, 0, 0.4);
+}
+
+.nav-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(176, 138, 0, 0.3);
+}
+
+.nav-button svg {
+  width: 24px;
+  height: 24px;
 }
 
 .button, button[type="button"], button[type="submit"] {
@@ -359,6 +401,7 @@ input[type="file"]::-webkit-file-upload-button:active {
 @media (max-width: 768px) {
   #root {
     padding: 1.5rem 0.5rem;
+    
   }
   
   /* Ensure all containers have consistent mobile padding */
@@ -394,12 +437,23 @@ input[type="file"]::-webkit-file-upload-button:active {
   
   .grid {
     grid-template-columns: 1fr;
-    gap: 0.75rem;
+    gap: 1.25rem;
   }
   
   .actions {
-    flex-direction: column;
-    gap: 0.5rem;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 3rem;
+  }
+  
+  .nav-button {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .nav-button svg {
+    width: 20px;
+    height: 20px;
   }
   
   .button, button[type="button"], button[type="submit"] {
@@ -435,6 +489,10 @@ input[type="file"]::-webkit-file-upload-button:active {
     padding: 0 0.5rem;
   }
   
+  .actions {
+    gap: 2rem;
+  }
+  
   .container h1 {
     font-size: 1.25rem;
   }
@@ -467,6 +525,20 @@ input[type="file"]::-webkit-file-upload-button:active {
   .react-datepicker-input {
     padding: 0.5rem;
     font-size: 16px;
+  }
+  
+  .grid {
+    gap: 1rem;
+  }
+  
+  .nav-button {
+    width: 45px;
+    height: 45px;
+  }
+  
+  .nav-button svg {
+    width: 18px;
+    height: 18px;
   }
   
   /* Modal mobile styles */
@@ -761,6 +833,24 @@ input[type="file"]::-webkit-file-upload-button:active {
   border-radius: 12px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   background: var(--surface);
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 1000;
+}
+
+.react-datepicker-popper {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: transparent !important;
+  z-index: 999;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .react-datepicker-input {
@@ -768,11 +858,13 @@ input[type="file"]::-webkit-file-upload-button:active {
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: .55rem .7rem;
+  padding-right: 25%;
   font-size: 1rem;
   background: var(--surface-2);
   color: var(--text);
   width: 100%;
   box-sizing: border-box;
+  position: relative;
 }
 
 .react-datepicker-input:focus {
@@ -950,16 +1042,91 @@ input[type="file"]::-webkit-file-upload-button:active {
   color: #475569;
 }
 
+/* Signature Input Component */
+.signature-container {
+  width: 100%;
+}
+
+.signature-canvas-wrapper {
+  position: relative;
+  border: 2px dashed #cbd5e1;
+  border-radius: 8px;
+  background: var(--surface-2);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.signature-canvas-wrapper:hover {
+  border-color: var(--brand-gold);
+}
+
+.signature-canvas {
+  display: block;
+  width: 100%;
+  height: 150px;
+  cursor: crosshair;
+  background: white;
+}
+
+.signature-placeholder {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #94a3b8;
+  font-size: 0.9rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+.signature-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.5rem;
+  padding: 0 0.25rem;
+}
+
+.signature-clear-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.signature-clear-btn:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.signature-clear-btn:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+}
+
+.signature-status {
+  color: #059669;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
 /* React DatePicker clear (cancel) button - remove default blue and match theme */
 .react-datepicker__close-icon { 
   outline: none !important; 
   box-shadow: none !important; 
-  background: var(--surface-2);
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  right: 1rem;
-  top: 1rem;
+  background: var(--brand-gold);
+  border-radius: 6px;
+  width: 25%;
+  height: 100%;
+  right: 0;
+  top: 0;
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .react-datepicker__close-icon:focus { 
@@ -968,19 +1135,24 @@ input[type="file"]::-webkit-file-upload-button:active {
 }
 
 .react-datepicker__close-icon::after {
-  background-color: var(--brand-gold) !important;
-  color: #fff !important;
+  background-color: transparent !important;
+  color: white !important;
   border: none !important;
   box-shadow: none !important;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  line-height: 20px;
-  font-size: 12px;
+  border-radius: 0;
+  width: 16px;
+  height: 16px;
+  line-height: 16px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.react-datepicker__close-icon:hover {
+  background-color: var(--brand-gold-600) !important;
 }
 
 .react-datepicker__close-icon:hover::after {
-  background-color: var(--brand-gold-600) !important;
+  background-color: transparent !important;
 }
 
 /* Mobile-specific datepicker styles - Modal-like design */
@@ -1163,6 +1335,28 @@ input[type="file"]::-webkit-file-upload-button:active {
     border-radius: 0 0 8px 8px;
     background: var(--surface);
   }
+  
+  /* Mobile signature input styles */
+  .signature-canvas {
+    height: 120px;
+  }
+  
+  .signature-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+  
+  .signature-clear-btn {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+  
+  .signature-status {
+    text-align: center;
+    font-size: 0.9rem;
+  }
 }
 
 /* Mobile pagination styles */
@@ -1170,8 +1364,8 @@ input[type="file"]::-webkit-file-upload-button:active {
   .form-navigation {
     flex-direction: row !important;
     gap: 1rem !important;
-    margin-top: 1.5rem;
-    padding: 0.5rem 0;
+    margin-top: 0.5rem;
+    padding: 0.25rem 0;
     justify-content: center;
     align-items: center;
   }
