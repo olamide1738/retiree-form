@@ -26,6 +26,21 @@ const initDB = async () => {
       )
     `)
     
+    // Create sequence for sequential IDs
+    await pool.query(`
+      CREATE SEQUENCE IF NOT EXISTS submissions_id_seq
+      START WITH 1
+      INCREMENT BY 1
+      NO MINVALUE
+      NO MAXVALUE
+      CACHE 1
+    `)
+    
+    // Set the sequence to start from the next available ID
+    await pool.query(`
+      SELECT setval('submissions_id_seq', COALESCE((SELECT MAX(id) FROM submissions), 0) + 1, false)
+    `)
+    
     await pool.query(`
       CREATE TABLE IF NOT EXISTS files (
         id SERIAL PRIMARY KEY,
@@ -131,7 +146,11 @@ export default async function handler(req, res) {
         // Delete all submissions
         await pool.query('DELETE FROM files')
         await pool.query('DELETE FROM submissions')
-        res.status(200).json({ success: true, message: 'All submissions cleared' })
+        
+        // Reset the sequence to start from 1
+        await pool.query('ALTER SEQUENCE submissions_id_seq RESTART WITH 1')
+        
+        res.status(200).json({ success: true, message: 'All submissions cleared and ID sequence reset' })
       }
       
     } else {
