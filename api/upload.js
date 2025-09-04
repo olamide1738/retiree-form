@@ -12,10 +12,13 @@ const initDB = async () => {
       ssl: {
         rejectUnauthorized: false
       },
-      // Session pooler optimizations
-      max: 1, // Limit connections for serverless
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 2000,
+      // Optimized for Vercel serverless
+      max: 1,
+      min: 0,
+      idleTimeoutMillis: 0, // Don't close idle connections
+      connectionTimeoutMillis: 10000, // Increased timeout
+      acquireTimeoutMillis: 10000, // Added acquire timeout
+      allowExitOnIdle: true, // Allow process to exit when idle
     })
     
     try {
