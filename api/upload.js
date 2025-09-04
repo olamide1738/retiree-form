@@ -1,27 +1,15 @@
 import pkg from 'pg'
-const { Pool } = pkg
+const { Client } = pkg
 import multer from 'multer'
 
-let pool
-
-// Initialize database connection - simplified for Vercel
-const initDB = async () => {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://postgres.kkuwgmttbekyxsvpmrrw:Midebobo123%@aws-1-eu-west-2.pooler.supabase.com:5432/postgres',
-      ssl: {
-        rejectUnauthorized: false
-      },
-      // Minimal settings for Vercel
-      max: 1,
-      min: 0,
-      idleTimeoutMillis: 0,
-      connectionTimeoutMillis: 0, // No timeout
-      acquireTimeoutMillis: 0, // No timeout
-      allowExitOnIdle: true,
-    })
-  }
-  return pool
+// Create a new client for each request (no pooling)
+const createClient = () => {
+  return new Client({
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres.kkuwgmttbekyxsvpmrrw:Midebobo123%@aws-1-eu-west-2.pooler.supabase.com:5432/postgres',
+    ssl: {
+      rejectUnauthorized: false
+    }
+  })
 }
 
 // Configure multer for file uploads
@@ -55,69 +43,72 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  try {
-    await initDB()
+  const fileFields = [
+    { name: 'retirementLetter', maxCount: 1 },
+    { name: 'birthCertOrId', maxCount: 1 },
+    { name: 'passportPhoto', maxCount: 1 },
+    { name: 'otherDocuments', maxCount: 20 },
+    { name: 'declarantSignature', maxCount: 1 },
+    { name: 'witnessSignature', maxCount: 1 },
+  ]
+  
+  upload.fields(fileFields)(req, res, async (err) => {
+    if (err) {
+      console.error('Upload error:', err)
+      return res.status(400).json({ error: 'File upload failed', details: err.message })
+    }
     
-    const fileFields = [
-      { name: 'retirementLetter', maxCount: 1 },
-      { name: 'birthCertOrId', maxCount: 1 },
-      { name: 'passportPhoto', maxCount: 1 },
-      { name: 'otherDocuments', maxCount: 20 },
-      { name: 'declarantSignature', maxCount: 1 },
-      { name: 'witnessSignature', maxCount: 1 },
-    ]
+    const client = createClient()
     
-    upload.fields(fileFields)(req, res, async (err) => {
-      if (err) {
-        console.error('Upload error:', err)
-        return res.status(400).json({ error: 'File upload failed', details: err.message })
-      }
+    try {
+      await client.connect()
+      console.log('Direct connection established for upload')
       
-      try {
-        const body = req.body || {}
-        const createdAt = new Date().toISOString()
+      const body = req.body || {}
+      const createdAt = new Date().toISOString()
 
-        // Insert submission
-        const result = await pool.query(
-          'INSERT INTO submissions (created_at, data_json) VALUES ($1, $2) RETURNING id',
-          [createdAt, JSON.stringify(body)]
-        )
-        
-        const submissionId = result.rows[0].id
+      // Insert submission
+      const result = await client.query(
+        'INSERT INTO submissions (created_at, data_json) VALUES ($1, $2) RETURNING id',
+        [createdAt, JSON.stringify(body)]
+      )
+      
+      const submissionId = result.rows[0].id
 
-        // Handle file uploads
-        const files = req.files || {}
-        const fileInserts = []
-        
-        Object.keys(files).forEach((field) => {
-          files[field].forEach((f) => {
-            // Store file as base64 in database for Vercel compatibility
-            const base64Data = f.buffer.toString('base64')
-            fileInserts.push([submissionId, field, f.originalname, base64Data])
-          })
+      // Handle file uploads
+      const files = req.files || {}
+      const fileInserts = []
+      
+      Object.keys(files).forEach((field) => {
+        files[field].forEach((f) => {
+          // Store file as base64 in database for Vercel compatibility
+          const base64Data = f.buffer.toString('base64')
+          fileInserts.push([submissionId, field, f.originalname, base64Data])
         })
+      })
 
-        if (fileInserts.length > 0) {
-          const placeholders = fileInserts.map((_, i) => 
-            `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`
-          ).join(',')
-          const flat = fileInserts.flat()
-          
-          await pool.query(
-            `INSERT INTO files (submission_id, field_name, original_name, stored_path) VALUES ${placeholders}`,
-            flat
-          )
-        }
-
-        res.status(201).json({ id: submissionId })
-      } catch (error) {
-        console.error('Error saving submission:', error)
-        res.status(500).json({ error: 'Failed to save submission', details: error.message })
+      if (fileInserts.length > 0) {
+        const placeholders = fileInserts.map((_, i) => 
+          `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`
+        ).join(',')
+        const flat = fileInserts.flat()
+        
+        await client.query(
+          `INSERT INTO files (submission_id, field_name, original_name, stored_path) VALUES ${placeholders}`,
+          flat
+        )
       }
-    })
-    
-  } catch (error) {
-    console.error('Database error:', error)
-    res.status(500).json({ error: 'Database operation failed', details: error.message })
-  }
+
+      res.status(201).json({ id: submissionId })
+    } catch (error) {
+      console.error('Error saving submission:', error)
+      res.status(500).json({ error: 'Failed to save submission', details: error.message })
+    } finally {
+      try {
+        await client.end()
+      } catch (endError) {
+        console.error('Error closing connection:', endError)
+      }
+    }
+  })
 }

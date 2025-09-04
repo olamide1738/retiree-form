@@ -1,26 +1,14 @@
 import pkg from 'pg'
-const { Pool } = pkg
+const { Client } = pkg
 
-let pool
-
-// Initialize database connection - simplified for Vercel
-const initDB = async () => {
-  if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://postgres.kkuwgmttbekyxsvpmrrw:Midebobo123%@aws-1-eu-west-2.pooler.supabase.com:5432/postgres',
-      ssl: {
-        rejectUnauthorized: false
-      },
-      // Minimal settings for Vercel
-      max: 1,
-      min: 0,
-      idleTimeoutMillis: 0,
-      connectionTimeoutMillis: 0, // No timeout
-      acquireTimeoutMillis: 0, // No timeout
-      allowExitOnIdle: true,
-    })
-  }
-  return pool
+// Create a new client for each request (no pooling)
+const createClient = () => {
+  return new Client({
+    connectionString: process.env.DATABASE_URL || 'postgresql://postgres.kkuwgmttbekyxsvpmrrw:Midebobo123%@aws-1-eu-west-2.pooler.supabase.com:5432/postgres',
+    ssl: {
+      rejectUnauthorized: false
+    }
+  })
 }
 
 export default async function handler(req, res) {
@@ -35,19 +23,21 @@ export default async function handler(req, res) {
     return
   }
 
+  const client = createClient()
+  
   try {
-    // Initialize database
-    await initDB()
+    await client.connect()
+    console.log('Direct connection established')
     
     if (req.method === 'GET') {
       // Get all submissions with files metadata
-      const submissionsResult = await pool.query(`
+      const submissionsResult = await client.query(`
         SELECT s.id, s.created_at, s.data_json
         FROM submissions s 
         ORDER BY s.id DESC
       `)
       
-      const filesResult = await pool.query(`
+      const filesResult = await client.query(`
         SELECT f.id, f.submission_id, f.field_name, f.original_name, f.stored_path
         FROM files f
       `)
@@ -83,7 +73,7 @@ export default async function handler(req, res) {
       const createdAt = new Date().toISOString()
 
       // Insert submission
-      const result = await pool.query(
+      const result = await client.query(
         'INSERT INTO submissions (created_at, data_json) VALUES ($1, $2) RETURNING id',
         [createdAt, JSON.stringify(body)]
       )
@@ -100,7 +90,7 @@ export default async function handler(req, res) {
         const submissionId = pathname.split('/').pop()
         
         // Delete from database (files will be deleted due to foreign key constraint)
-        const deleteResult = await pool.query(
+        const deleteResult = await client.query(
           'DELETE FROM submissions WHERE id = $1',
           [submissionId]
         )
@@ -112,11 +102,11 @@ export default async function handler(req, res) {
         res.status(200).json({ success: true, deletedId: submissionId })
       } else {
         // Delete all submissions
-        await pool.query('DELETE FROM files')
-        await pool.query('DELETE FROM submissions')
+        await client.query('DELETE FROM files')
+        await client.query('DELETE FROM submissions')
         
         // Reset the sequence to start from 1
-        await pool.query('ALTER SEQUENCE submissions_id_seq RESTART WITH 1')
+        await client.query('ALTER SEQUENCE submissions_id_seq RESTART WITH 1')
         
         res.status(200).json({ success: true, message: 'All submissions cleared and ID sequence reset' })
       }
@@ -127,5 +117,11 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Error in submissions API:', error)
     res.status(500).json({ error: 'Failed to load submissions' })
+  } finally {
+    try {
+      await client.end()
+    } catch (endError) {
+      console.error('Error closing connection:', endError)
+    }
   }
 }
