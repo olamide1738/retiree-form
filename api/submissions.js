@@ -17,40 +17,47 @@ const initDB = async () => {
       connectionTimeoutMillis: 2000,
     })
     
-    // Create tables if they don't exist
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS submissions (
-        id SERIAL PRIMARY KEY,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        data_json TEXT NOT NULL
-      )
-    `)
-    
-    // Create sequence for sequential IDs
-    await pool.query(`
-      CREATE SEQUENCE IF NOT EXISTS submissions_id_seq
-      START WITH 1
-      INCREMENT BY 1
-      NO MINVALUE
-      NO MAXVALUE
-      CACHE 1
-    `)
-    
-    // Set the sequence to start from the next available ID
-    await pool.query(`
-      SELECT setval('submissions_id_seq', COALESCE((SELECT MAX(id) FROM submissions), 0) + 1, false)
-    `)
-    
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS files (
-        id SERIAL PRIMARY KEY,
-        submission_id INTEGER NOT NULL,
-        field_name VARCHAR(255) NOT NULL,
-        original_name VARCHAR(255) NOT NULL,
-        stored_path TEXT NOT NULL,
-        FOREIGN KEY(submission_id) REFERENCES submissions(id) ON DELETE CASCADE
-      )
-    `)
+    try {
+      // Create tables if they don't exist
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS submissions (
+          id SERIAL PRIMARY KEY,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          data_json TEXT NOT NULL
+        )
+      `)
+      
+      // Create sequence for sequential IDs
+      await pool.query(`
+        CREATE SEQUENCE IF NOT EXISTS submissions_id_seq
+        START WITH 1
+        INCREMENT BY 1
+        NO MINVALUE
+        NO MAXVALUE
+        CACHE 1
+      `)
+      
+      // Set the sequence to start from the next available ID
+      await pool.query(`
+        SELECT setval('submissions_id_seq', COALESCE((SELECT MAX(id) FROM submissions), 0) + 1, false)
+      `)
+      
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS files (
+          id SERIAL PRIMARY KEY,
+          submission_id INTEGER NOT NULL,
+          field_name VARCHAR(255) NOT NULL,
+          original_name VARCHAR(255) NOT NULL,
+          stored_path TEXT NOT NULL,
+          FOREIGN KEY(submission_id) REFERENCES submissions(id) ON DELETE CASCADE
+        )
+      `)
+      
+      console.log('Database tables created successfully')
+    } catch (error) {
+      console.error('Error creating tables:', error)
+      // Don't throw error, just log it and continue
+    }
   }
   return pool
 }

@@ -17,6 +17,33 @@ const initDB = async () => {
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
     })
+    
+    try {
+      // Create tables if they don't exist
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS submissions (
+          id SERIAL PRIMARY KEY,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          data_json TEXT NOT NULL
+        )
+      `)
+      
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS files (
+          id SERIAL PRIMARY KEY,
+          submission_id INTEGER NOT NULL,
+          field_name VARCHAR(255) NOT NULL,
+          original_name VARCHAR(255) NOT NULL,
+          stored_path TEXT NOT NULL,
+          FOREIGN KEY(submission_id) REFERENCES submissions(id) ON DELETE CASCADE
+        )
+      `)
+      
+      console.log('Database tables created successfully')
+    } catch (error) {
+      console.error('Error creating tables:', error)
+      // Don't throw error, just log it and continue
+    }
   }
   return pool
 }
