@@ -99,130 +99,154 @@ export default async function handler(req, res) {
       
       doc.moveDown(1.5)
 
-      // Personal Information Section
-      if (data.fullName || data.dateOfBirth || data.gender || data.nationality) {
-        doc.fontSize(11)
-          .font('Helvetica-Bold')
+      // Helper function to create a section box
+      const createSection = (title, fields, startY, width, height) => {
+        // Section header
+        doc.rect(50, startY, width, 20)
           .fillColor('#B8860B')
-          .text('PERSONAL INFORMATION', { underline: true })
+          .fill()
         
+        doc.fillColor('white')
+          .fontSize(10)
+          .font('Helvetica-Bold')
+          .text(title, 55, startY + 5)
+        
+        // Section content
         doc.fillColor('black')
-        doc.fontSize(9)
+        doc.fontSize(8)
         doc.font('Helvetica')
         
+        let currentY = startY + 25
+        fields.forEach(field => {
+          if (data[field.key] && currentY < startY + height - 10) {
+            const label = field.label + ':'
+            const value = String(data[field.key])
+            
+            // Truncate long values
+            const maxValueLength = 25
+            const truncatedValue = value.length > maxValueLength ? 
+              value.substring(0, maxValueLength) + '...' : value
+            
+            doc.text(`${label}`, 55, currentY)
+            doc.text(truncatedValue, 55 + 80, currentY)
+            currentY += 12
+          }
+        })
+        
+        return currentY
+      }
+
+      // Two-column grid layout
+      const leftColumnX = 50
+      const rightColumnX = 297.5 // Half of 495 + 50
+      const columnWidth = 222.5 // (495 - 50) / 2
+      const sectionHeight = 120
+      const startY = doc.y
+
+      // Left Column
+      let currentY = startY
+      
+      // Personal Information (Left)
+      if (data.fullName || data.dateOfBirth || data.gender || data.nationality) {
         const personalFields = [
           { key: 'fullName', label: 'Full Name' },
           { key: 'dateOfBirth', label: 'Date of Birth' },
           { key: 'gender', label: 'Gender' },
           { key: 'nationality', label: 'Nationality' },
-          { key: 'residentialAddress', label: 'Residential Address' },
-          { key: 'phoneNumber', label: 'Phone Number' },
-          { key: 'emailAddress', label: 'Email Address' }
+          { key: 'residentialAddress', label: 'Address' },
+          { key: 'phoneNumber', label: 'Phone' },
+          { key: 'emailAddress', label: 'Email' }
         ]
-        
-        personalFields.forEach(field => {
-          if (data[field.key]) {
-            doc.text(`${field.label}: ${data[field.key]}`, { indent: 20 })
-          }
-        })
-        doc.moveDown(0.5)
+        currentY = createSection('PERSONAL INFO', personalFields, currentY, columnWidth, sectionHeight)
+        currentY += 10
       }
 
-      // Employment Information Section
+      // Employment Information (Left)
       if (data.organization || data.jobTitle || data.department) {
-        doc.fontSize(11)
-          .font('Helvetica-Bold')
-          .fillColor('#B8860B')
-          .text('EMPLOYMENT INFORMATION', { underline: true })
-        
-        doc.fillColor('black')
-        doc.fontSize(9)
-        doc.font('Helvetica')
-        
         const employmentFields = [
           { key: 'organization', label: 'Organization' },
           { key: 'jobTitle', label: 'Job Title' },
           { key: 'department', label: 'Department' },
-          { key: 'dateOfEmployment', label: 'Date of Employment' },
-          { key: 'dateOfRetirement', label: 'Date of Retirement' },
-          { key: 'retirementReason', label: 'Retirement Reason' },
-          { key: 'lastSalaryOrGrade', label: 'Last Salary/Grade' }
+          { key: 'dateOfEmployment', label: 'Start Date' },
+          { key: 'dateOfRetirement', label: 'End Date' },
+          { key: 'retirementReason', label: 'Reason' },
+          { key: 'lastSalaryOrGrade', label: 'Last Salary' }
         ]
-        
-        employmentFields.forEach(field => {
-          if (data[field.key]) {
-            doc.text(`${field.label}: ${data[field.key]}`, { indent: 20 })
-          }
-        })
-        doc.moveDown(0.5)
+        currentY = createSection('EMPLOYMENT', employmentFields, currentY, columnWidth, sectionHeight)
+        currentY += 10
       }
 
-      // Pension Information Section
+      // Right Column
+      currentY = startY
+      
+      // Pension Information (Right)
       if (data.pensionNumber || data.bankName || data.accountNumber) {
-        doc.fontSize(11)
-          .font('Helvetica-Bold')
-          .fillColor('#B8860B')
-          .text('PENSION INFORMATION', { underline: true })
-        
-        doc.fillColor('black')
-        doc.fontSize(9)
-        doc.font('Helvetica')
-        
         const pensionFields = [
-          { key: 'pensionNumber', label: 'Pension Number' },
-          { key: 'bankName', label: 'Bank Name' },
-          { key: 'accountNumber', label: 'Account Number' },
+          { key: 'pensionNumber', label: 'Pension No' },
+          { key: 'bankName', label: 'Bank' },
+          { key: 'accountNumber', label: 'Account No' },
           { key: 'pensionPaymentMode', label: 'Payment Mode' },
           { key: 'bvn', label: 'BVN' }
         ]
+        currentY = createSection('PENSION INFO', pensionFields, currentY, columnWidth, sectionHeight)
+        currentY += 10
+      }
+
+      // Next of Kin (Right)
+      if (data.nextOfKinName || data.nextOfKinPhone) {
+        const nextOfKinFields = [
+          { key: 'nextOfKinName', label: 'Name' },
+          { key: 'nextOfKinPhone', label: 'Phone' }
+        ]
+        currentY = createSection('NEXT OF KIN', nextOfKinFields, currentY, columnWidth, sectionHeight)
+        currentY += 10
+      }
+
+      // Files Section with Images (Full Width)
+      const submissionFiles = filesBySubmission[row.id] || []
+      if (submissionFiles.length) {
+        doc.moveDown(1)
+        doc.fontSize(11)
+          .font('Helvetica-Bold')
+          .fillColor('#B8860B')
+          .text('ATTACHED DOCUMENTS & IMAGES', { underline: true })
         
-        pensionFields.forEach(field => {
-          if (data[field.key]) {
-            doc.text(`${field.label}: ${data[field.key]}`, { indent: 20 })
+        doc.fillColor('black')
+        doc.fontSize(9)
+        doc.font('Helvetica')
+        
+        submissionFiles.forEach((f, fileIndex) => {
+          const fileUrl = `${req.headers.host}/api/files/${f.id}`
+          doc.text(`• ${f.field_name}: ${f.original_name}`, { indent: 20 })
+          doc.fontSize(8)
+            .fillColor('#1565c0')
+            .text(`  Download: ${fileUrl}`, { indent: 20 })
+          doc.fillColor('black')
+          
+          // Add image if it's a signature or photo
+          if (f.field_name.includes('Signature') || f.field_name.includes('Photo')) {
+            try {
+              // Decode base64 image and add to PDF
+              const base64Data = f.stored_path
+              const imageBuffer = Buffer.from(base64Data, 'base64')
+              
+              // Add image with small size
+              doc.image(imageBuffer, 60, doc.y + 5, { 
+                width: 100, 
+                height: 60,
+                fit: [100, 60]
+              })
+              doc.moveDown(1)
+            } catch (imgError) {
+              console.log('Could not add image to PDF:', imgError.message)
+              doc.text(`  [Image: ${f.original_name}]`, { indent: 20 })
+            }
           }
         })
         doc.moveDown(0.5)
       }
 
-      // Next of Kin Section
-      if (data.nextOfKinName || data.nextOfKinPhone) {
-        doc.fontSize(11)
-          .font('Helvetica-Bold')
-          .fillColor('#B8860B')
-          .text('NEXT OF KIN', { underline: true })
-        
-        doc.fillColor('black')
-        doc.fontSize(9)
-        doc.font('Helvetica')
-        
-        if (data.nextOfKinName) {
-          doc.text(`Name: ${data.nextOfKinName}`, { indent: 20 })
-        }
-        if (data.nextOfKinPhone) {
-          doc.text(`Phone: ${data.nextOfKinPhone}`, { indent: 20 })
-        }
-        doc.moveDown(0.5)
-      }
-
-      // Files Section
-      const submissionFiles = filesBySubmission[row.id] || []
-      if (submissionFiles.length) {
-        doc.fontSize(11)
-          .font('Helvetica-Bold')
-          .fillColor('#B8860B')
-          .text('ATTACHED DOCUMENTS', { underline: true })
-        
-        doc.fillColor('black')
-        doc.fontSize(9)
-        doc.font('Helvetica')
-        
-        submissionFiles.forEach(f => {
-          doc.text(`• ${f.field_name}: ${f.original_name}`, { indent: 20 })
-        })
-        doc.moveDown(0.5)
-      }
-
-      // Additional Information
+      // Additional Information (Full Width)
       if (data.preferredCommunication || data.healthStatus || data.additionalComments) {
         doc.fontSize(11)
           .font('Helvetica-Bold')
