@@ -69,13 +69,9 @@ export default async function handler(req, res) {
 
   try {
     // Initialize database
-    console.log('Initializing database for submissions API...')
     await initDB()
-    console.log('Database initialized successfully')
     
     if (req.method === 'GET') {
-      console.log('Fetching submissions...')
-      
       // Get all submissions with files metadata
       const submissionsResult = await pool.query(`
         SELECT s.id, s.created_at, s.data_json
@@ -83,14 +79,10 @@ export default async function handler(req, res) {
         ORDER BY s.id DESC
       `)
       
-      console.log(`Found ${submissionsResult.rows.length} submissions`)
-      
       const filesResult = await pool.query(`
         SELECT f.id, f.submission_id, f.field_name, f.original_name, f.stored_path
         FROM files f
       `)
-      
-      console.log(`Found ${filesResult.rows.length} files`)
       
       // Group files by submission_id
       const filesBySubmission = {}
@@ -115,7 +107,6 @@ export default async function handler(req, res) {
         files: filesBySubmission[r.id] || []
       }))
       
-      console.log('Returning submissions:', result.length)
       res.status(200).json(result)
       
     } else if (req.method === 'POST') {
@@ -166,7 +157,7 @@ export default async function handler(req, res) {
       res.status(405).json({ error: 'Method not allowed' })
     }
   } catch (error) {
-    console.error('Database error:', error)
-    res.status(500).json({ error: 'Database operation failed', details: error.message })
+    console.error('Error in submissions API:', error)
+    res.status(500).json({ error: 'Failed to load submissions' })
   }
 }
