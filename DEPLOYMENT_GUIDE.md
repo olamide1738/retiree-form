@@ -16,6 +16,7 @@
    - Select the "Free" plan
    - Click "Create new project"
    - Wait 2-3 minutes for setup
+   - Goodluck
 
 3. Get your connection details:
    - Go to Settings → Database
@@ -161,5 +162,5 @@ PORT=4000
 ## Support
 
 - [Vercel Documentation](https://vercel.com/docs)
-- [Supabase Documentation](https://supabase.com/docs)
+- [Supabase Documentationy](https://supabase.com/docs)
 - [PostgreSQL Documentation](https://node-postgres.com/)

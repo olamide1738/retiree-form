@@ -332,11 +332,12 @@ function App() {
                       height: '5px',
                       borderRadius: '50%',
                       border: 'none',
-                      backgroundColor: currentPage === i + 1 ? '#000000' : '#9ca3af',
+                      backgroundColor: currentPage === i + 1 ? '#000000' : '#c5ab11',
                       cursor: 'pointer',
                       transition: 'all 0.3s ease',
                       padding: "0px"
                     }}
+                    
                   />
                 ))}
               </div>
