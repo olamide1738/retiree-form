@@ -17,13 +17,7 @@ export default function LoginForm({ onLogin }) {
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '50vh',
-      padding: '20px'
-    }}>
+    <div className="login-container">
       <div className="login-form-container" style={{
         backgroundColor: 'white',
         padding: '40px',

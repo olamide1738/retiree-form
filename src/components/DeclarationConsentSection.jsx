@@ -1,4 +1,5 @@
 import DatePickerInput from "./DatePickerInput";
+import FileInput from "./FileInput";
 
 export default function DeclarationConsentSection({ values, onChange, onFileChange }) {
   return (
@@ -22,8 +23,7 @@ export default function DeclarationConsentSection({ values, onChange, onFileChan
 
         <label>
           <span>Signature (Upload)</span>
-          <input
-            type="file"
+          <FileInput
             name="declarantSignature"
             accept="image/*"
             onChange={onFileChange}
@@ -49,8 +49,7 @@ export default function DeclarationConsentSection({ values, onChange, onFileChan
 
         <label>
           <span>Witness / HR Officer Signature</span>
-          <input
-            type="file"
+          <FileInput
             name="witnessSignature"
             accept="image/*"
             onChange={onFileChange}

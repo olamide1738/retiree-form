@@ -58,29 +58,38 @@ export default async function handler(req, res) {
     
     if (req.method === 'GET') {
       // Get all submissions with files metadata
-      const [submissions] = await pool.query(`
-        SELECT s.id, s.created_at, s.data_json,
-               COALESCE(
-                 (SELECT JSON_ARRAYAGG(
-                   JSON_OBJECT(
-                     'id', f.id,
-                     'field', f.field_name,
-                     'original', f.original_name,
-                     'path', f.stored_path
-                   )
-                 )
-                 FROM files f WHERE f.submission_id = s.id),
-                 JSON_ARRAY()
-               ) AS files
+      const submissionsResult = await pool.query(`
+        SELECT s.id, s.created_at, s.data_json
         FROM submissions s 
         ORDER BY s.id DESC
       `)
+      
+      const filesResult = await pool.query(`
+        SELECT f.id, f.submission_id, f.field_name, f.original_name, f.stored_path
+        FROM files f
+      `)
+      
+      // Group files by submission_id
+      const filesBySubmission = {}
+      filesResult.rows.forEach(f => {
+        if (!filesBySubmission[f.submission_id]) {
+          filesBySubmission[f.submission_id] = []
+        }
+        filesBySubmission[f.submission_id].push({
+          id: f.id,
+          field: f.field_name,
+          original: f.original_name,
+          path: f.stored_path
+        })
+      })
+      
+      const submissions = submissionsResult.rows
       
       const result = submissions.map(r => ({
         id: r.id,
         createdAt: r.created_at,
         data: JSON.parse(r.data_json || '{}'),
-        files: r.files ? JSON.parse(r.files) : []
+        files: filesBySubmission[r.id] || []
       }))
       
       res.status(200).json(result)

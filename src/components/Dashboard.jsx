@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import LoginForm from './LoginForm'
+import Modal from './Modal'
 
 export default function Dashboard() {
   const [rows, setRows] = useState([])
@@ -10,9 +11,31 @@ export default function Dashboard() {
     return sessionStorage.getItem('dashboardAuthenticated') === 'true'
   })
 
+  // Modal state
+  const [modal, setModal] = useState({
+    isOpen: false,
+    type: 'success',
+    title: '',
+    message: ''
+  })
+
+  // Modal functions
+  const showModal = (type, title, message) => {
+    setModal({
+      isOpen: true,
+      type,
+      title,
+      message
+    })
+  }
+
+  const closeModal = () => {
+    setModal(prev => ({ ...prev, isOpen: false }))
+  }
+
   const loadSubmissions = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/submissions`)
+      const res = await fetch('/api/submissions')
       if (!res.ok) throw new Error('Failed to load submissions')
       const json = await res.json()
       setRows(json)
@@ -46,18 +69,20 @@ export default function Dashboard() {
   }
 
   const deleteSubmission = async (id) => {
-    if (!confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
-      return
-    }
-
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/submissions/${id}`, {
-        method: 'DELETE'
-      })
-      if (!res.ok) throw new Error('Failed to delete submission')
-      await loadSubmissions() // Reload the list
-    } catch (e) {
-      alert('Error deleting submission: ' + e.message)
+    showModal('error', 'Confirm Deletion', 'Are you sure you want to delete this submission? This action cannot be undone.')
+    
+    // For now, we'll use a simple approach - in a real app you'd want a confirmation modal
+    if (window.confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
+      try {
+        const res = await fetch(`/api/submissions/${id}`, {
+          method: 'DELETE'
+        })
+        if (!res.ok) throw new Error('Failed to delete submission')
+        await loadSubmissions() // Reload the list
+        showModal('success', 'Submission Deleted', 'The submission has been successfully deleted.')
+      } catch (e) {
+        showModal('error', 'Delete Failed', 'Error deleting submission: ' + e.message)
+      }
     }
   }
 
@@ -67,14 +92,14 @@ export default function Dashboard() {
     }
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/submissions`, {
+      const res = await fetch('/api/submissions', {
         method: 'DELETE'
       })
       if (!res.ok) throw new Error('Failed to clear submissions')
       await loadSubmissions() // Reload the list
-      alert('All submissions have been cleared.')
+      showModal('success', 'All Submissions Cleared', 'All submissions have been successfully cleared.')
     } catch (e) {
-      alert('Error clearing submissions: ' + e.message)
+      showModal('error', 'Clear Failed', 'Error clearing submissions: ' + e.message)
     }
   }
 
@@ -99,7 +124,7 @@ export default function Dashboard() {
   const isMobile = window.innerWidth <= 768
 
   return (
-    <div style={{ padding: '0 1rem' }}>
+    <div className="dashboard-container">
       <div className="dashboard-header" style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -116,7 +141,7 @@ export default function Dashboard() {
           justifyContent: 'flex-end'
         }}>
           <a 
-            href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/submissions/export`} 
+            href="/api/submissions/export" 
             target="_blank" 
             rel="noreferrer"
             style={{
@@ -138,7 +163,7 @@ export default function Dashboard() {
             Export to Excel
           </a>
           <a 
-            href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/submissions/export.pdf`} 
+            href="/api/submissions/export.pdf" 
             target="_blank" 
             rel="noreferrer"
             style={{
@@ -270,7 +295,7 @@ export default function Dashboard() {
                         <a 
                           key={f.id}
                           className="file-link" 
-                          href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/files/${f.id}`} 
+                          href={`/api/files/${f.id}`} 
                           target="_blank" 
                           rel="noreferrer"
                           style={{ fontSize: '0.85rem', wordBreak: 'break-word' }}
@@ -350,7 +375,7 @@ export default function Dashboard() {
                                 <li key={f.id} style={{ marginBottom: '2px' }}>
                                   <a 
                                     className="file-link" 
-                                    href={`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/files/${f.id}`} 
+                                    href={`/api/files/${f.id}`} 
                                     target="_blank" 
                                     rel="noreferrer"
                                     style={{ fontSize: '0.8rem' }}
@@ -403,6 +428,16 @@ export default function Dashboard() {
           </table>
         </div>
       )}
+      
+      {/* Modal */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        duration={5000}
+      />
     </div>
   )
 }

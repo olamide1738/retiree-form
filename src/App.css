@@ -25,7 +25,7 @@ body {
 #root {
   max-width: 1000px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 2rem 0.5rem;
 }
 
 .container h1 {
@@ -49,14 +49,81 @@ body {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Page transition animations */
+.form-section {
+  animation: slideInRight 0.4s ease-out;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Smooth transitions for all interactive elements */
+.section {
+  transition: all 0.3s ease;
+}
+
+.section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(16, 24, 40, 0.08);
 }
 
 .section {
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 1rem;
+  padding: 1.5rem;
   background: var(--surface);
   box-shadow: 0 2px 10px rgba(16, 24, 40, 0.04);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .section legend {
@@ -96,6 +163,15 @@ input, select, textarea {
   font-size: 1rem;
   background: var(--surface-2);
   color: var(--text);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeIn 0.3s ease-out;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 3px rgba(176, 138, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 input::placeholder, textarea::placeholder {
@@ -206,16 +282,39 @@ input[type="file"]::-webkit-file-upload-button:active {
   flex-direction: row;
   gap: 2rem;
   justify-content: center;
+  animation: fadeInUp 0.5s ease-out 0.2s both;
 }
 
 .form-navigation button {
   flex: 0 0 auto;
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.form-navigation button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.form-navigation button:hover::before {
+  left: 100%;
 }
 
 .form-navigation button:hover:not(:disabled) {
-  transform: scale(1.1);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transform: scale(1.1) translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.form-navigation button:active:not(:disabled) {
+  transform: scale(1.05) translateY(0);
+  transition: all 0.1s ease;
 }
 
 .page-dots {
@@ -225,20 +324,46 @@ input[type="file"]::-webkit-file-upload-button:active {
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out 0.3s both;
 }
 
 .page-dots button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.page-dots button::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(176, 138, 0, 0.2);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
   transition: all 0.3s ease;
 }
 
 .page-dots button:hover {
-  transform: scale(1.2);
+  transform: scale(1.3);
+}
+
+.page-dots button:hover::after {
+  width: 20px;
+  height: 20px;
 }
 
 /* Mobile Responsive Styles */
 @media (max-width: 768px) {
   #root {
-    padding: 1.5rem 1rem;
+    padding: 1.5rem 0.5rem;
+  }
+  
+  /* Ensure all containers have consistent mobile padding */
+  .container {
+    padding: 0 0.5rem;
   }
   
   .container h1 {
@@ -252,8 +377,11 @@ input[type="file"]::-webkit-file-upload-button:active {
   }
   
   .section {
-    padding: 0.75rem;
+    padding: 1.25rem;
     margin-bottom: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   
   .section:first-of-type {
@@ -285,6 +413,11 @@ input[type="file"]::-webkit-file-upload-button:active {
     font-size: 16px; /* Prevents zoom on iOS */
   }
   
+  .react-datepicker-input {
+    padding: 0.75rem;
+    font-size: 16px;
+  }
+  
   input[type="file"]::file-selector-button,
   input[type="file"]::-webkit-file-upload-button {
     padding: 0.75rem 1rem;
@@ -294,7 +427,12 @@ input[type="file"]::-webkit-file-upload-button:active {
 
 @media (max-width: 480px) {
   #root {
-    padding: 1rem 1rem;
+    padding: 1rem 0.5rem;
+  }
+  
+  /* Ensure all containers have consistent small mobile padding */
+  .container {
+    padding: 0 0.5rem;
   }
   
   .container h1 {
@@ -302,8 +440,11 @@ input[type="file"]::-webkit-file-upload-button:active {
   }
   
   .section {
-    padding: 0.5rem;
+    padding: 1rem;
     border-radius: 8px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
   
   .section:first-of-type {
@@ -321,6 +462,177 @@ input[type="file"]::-webkit-file-upload-button:active {
   input, select, textarea {
     padding: 0.5rem;
     font-size: 16px;
+  }
+  
+  .react-datepicker-input {
+    padding: 0.5rem;
+    font-size: 16px;
+  }
+  
+  /* Modal mobile styles */
+  .modal-content {
+    padding: 1.5rem;
+  }
+  
+  .modal-title {
+    font-size: 1.25rem;
+  }
+  
+  .modal-message {
+    font-size: 0.9rem;
+  }
+  
+  .modal-icon {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 1rem;
+  }
+  
+  .modal-icon svg {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* Dashboard container styling */
+.dashboard-container {
+  padding: 0 0.5rem;
+}
+
+/* Login container styling */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+  padding: 0 0.5rem;
+}
+
+/* Modal Styles */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+  padding: 1rem;
+}
+
+.modal-container {
+  background: var(--surface);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 500px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.modal-content {
+  padding: 2rem;
+  text-align: center;
+  position: relative;
+}
+
+.modal-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1.5rem auto;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: iconBounce 0.6s ease-out;
+}
+
+.modal-icon.success {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+}
+
+.modal-icon.error {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: white;
+}
+
+.modal-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--brand-brown);
+  margin: 0 0 1rem 0;
+  animation: fadeInUp 0.5s ease-out 0.2s both;
+}
+
+.modal-message {
+  font-size: 1rem;
+  color: var(--text);
+  line-height: 1.6;
+  margin: 0 0 2rem 0;
+  animation: fadeInUp 0.5s ease-out 0.3s both;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: var(--surface-2);
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  color: var(--muted);
+}
+
+.modal-close-btn:hover {
+  background: var(--border);
+  color: var(--text);
+  transform: scale(1.1);
+}
+
+.modal-close-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes iconBounce {
+  0% {
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 
@@ -442,68 +754,441 @@ input[type="file"]::-webkit-file-upload-button:active {
   text-decoration: underline;
 }
 
-/* React DatePicker header spacing tweaks */
+/* React DatePicker styling */
 .react-datepicker {
   font-family: inherit;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  background: var(--surface);
 }
+
+.react-datepicker-input {
+  appearance: none;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: .55rem .7rem;
+  font-size: 1rem;
+  background: var(--surface-2);
+  color: var(--text);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.react-datepicker-input:focus {
+  outline: none;
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 3px rgba(176, 138, 0, 0.1);
+}
+
+.react-datepicker-input::placeholder {
+  color: #475569;
+}
+
 .react-datepicker__header {
-  padding-top: .75rem;
-  padding-bottom: .5rem;
+  padding: 1rem;
+  background: var(--surface-2);
+  border-bottom: 1px solid #e2e8f0;
+  border-radius: 12px 12px 0 0;
 }
+
 .react-datepicker__current-month {
-  margin-bottom: .5rem;
+  margin-bottom: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--brand-brown);
 }
+
 .react-datepicker__header .react-datepicker__month-dropdown-container,
 .react-datepicker__header .react-datepicker__year-dropdown-container {
   display: inline-block;
-  margin: 0 .5rem;
+  margin: 0 0.5rem;
 }
+
 .react-datepicker__month-select,
 .react-datepicker__year-select {
-  padding: .4rem .6rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 8px;
   border: 1px solid #cbd5e1;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.9rem;
+  min-width: 100px;
 }
+
 .react-datepicker__navigation {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
-  top: 10px;
+  top: 1rem;
+  background: var(--surface-2);
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.react-datepicker__navigation:hover {
+  background: var(--brand-gold);
+  border-color: var(--brand-gold);
+}
+
+.react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
+  border-color: white;
+}
+
+.react-datepicker__day-names {
+  margin-bottom: 0.5rem;
+  padding: 0 1rem;
+}
+
+.react-datepicker__day-name {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.85rem;
+  width: 2.5rem;
+  line-height: 2.5rem;
+}
+
+.react-datepicker__month {
+  padding: 0 1rem 1rem 1rem;
+}
+
+.react-datepicker__day {
+  width: 2.5rem;
+  height: 2.5rem;
+  line-height: 2.5rem;
+  border-radius: 8px;
+  margin: 0.125rem;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.react-datepicker__day:hover {
+  background: var(--brand-gold-100);
+  color: var(--brand-gold-800);
+}
+
+.react-datepicker__day--selected {
+  background: var(--brand-gold) !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.react-datepicker__day--keyboard-selected {
+  background: var(--brand-gold-200);
+  color: var(--brand-gold-800);
+}
+
+.react-datepicker__day--today {
+  background: var(--surface-2);
+  color: var(--brand-brown);
+  font-weight: 600;
+}
+
+/* Custom File Input Component - Desktop */
+.file-input-container {
+  display: flex;
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: var(--surface-2);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.file-input-container:focus-within {
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 3px rgba(176, 138, 0, 0.1);
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-input-label {
+  display: flex;
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  flex-direction: row;
+}
+
+.file-input-button {
+  background: var(--brand-gold);
+  color: white;
+  padding: 0.55rem 1rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border-radius: 0;
+}
+
+.file-input-button:hover {
+  background: var(--brand-gold-600);
+}
+
+.file-input-display {
+  flex: 1;
+  padding: 0.55rem 0.7rem;
+  color: var(--text);
+  font-size: 1rem;
+  background: transparent;
+  border: none;
+  outline: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+
+.file-input-display:empty::before {
+  content: 'No file selected.';
+  color: #475569;
 }
 
 /* React DatePicker clear (cancel) button - remove default blue and match theme */
-.react-datepicker__close-icon { outline: none !important; box-shadow: none !important; }
-.react-datepicker__close-icon:focus { outline: none !important; box-shadow: none !important; }
+.react-datepicker__close-icon { 
+  outline: none !important; 
+  box-shadow: none !important; 
+  background: var(--surface-2);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  right: 1rem;
+  top: 1rem;
+}
+
+.react-datepicker__close-icon:focus { 
+  outline: none !important; 
+  box-shadow: none !important; 
+}
+
 .react-datepicker__close-icon::after {
   background-color: var(--brand-gold) !important;
   color: #fff !important;
   border: none !important;
   box-shadow: none !important;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
+  font-size: 12px;
 }
+
 .react-datepicker__close-icon:hover::after {
   background-color: var(--brand-gold-600) !important;
+}
+
+/* Mobile-specific datepicker styles - Modal-like design */
+@media (max-width: 768px) {
+  .react-datepicker__portal {
+    background-color: transparent !important;
+  }
+  
+  .react-datepicker {
+    width: 85vw !important;
+    max-width: 350px !important;
+    left: 50% !important;
+    right: auto !important;
+    margin: 0 !important;
+    border-radius: 16px;
+    position: fixed !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 1000;
+    max-height: 65vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    background: transparent;
+  }
+  
+  .react-datepicker-popper {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background: transparent;
+    z-index: 999;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .react-datepicker-popper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: transparent;
+    z-index: -1;
+  }
+  
+  .react-datepicker-popper[data-placement] {
+    transform: none !important;
+  }
+  
+  .react-datepicker__header {
+    padding: 1.25rem 1rem 1rem 1rem;
+    text-align: center;
+    position: relative;
+    background: transparent;
+    border-radius: 16px 16px 0 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  
+  .react-datepicker__current-month {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--brand-brown);
+  }
+  
+  .react-datepicker__month-select,
+  .react-datepicker__year-select {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.85rem;
+    min-width: 90px;
+    margin: 0 0.2rem;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: var(--surface);
+  }
+  
+  .react-datepicker__navigation {
+    width: 20px;
+    height: 20px;
+    top: 1.25rem;
+    position: absolute;
+    background: var(--surface-2);
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+  
+  .react-datepicker__navigation:hover {
+    background: var(--brand-gold);
+    border-color: var(--brand-gold);
+  }
+  
+  .react-datepicker__navigation:hover .react-datepicker__navigation-icon::before {
+    border-color: white;
+  }
+  
+  .react-datepicker__navigation--previous {
+    left: 1rem;
+  }
+  
+  .react-datepicker__navigation--next {
+    right: 1rem;
+  }
+  
+  .react-datepicker__day {
+    width: 2.25rem;
+    height: 2.25rem;
+    line-height: 2.25rem;
+    font-size: 0.85rem;
+    margin: 0.1rem;
+    border-radius: 6px;
+  }
+  
+  .react-datepicker__day-name {
+    width: 2.25rem;
+    line-height: 2.25rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  
+  .react-datepicker__month {
+    padding: 0.75rem 1rem 1.25rem 1rem;
+    background: transparent;
+  }
+  
+  .react-datepicker__day-names {
+    padding: 0 1rem;
+    margin-bottom: 0.5rem;
+    background: transparent;
+  }
+  
+  .react-datepicker__close-icon {
+    width: 36px;
+    height: 28px;
+    right: 0.75rem;
+    top: 0.75rem;
+  }
+  
+  .react-datepicker__close-icon::after {
+    width: 20px;
+    height: 20px;
+    line-height: 20px;
+    font-size: 12px;
+  }
+  
+  /* Mobile file input styles - stacked layout */
+  .file-input-container {
+    flex-direction: column;
+    border-radius: 8px;
+  }
+  
+  .file-input-label {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .file-input-button {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    border-radius: 8px 8px 0 0;
+    text-align: center;
+  }
+  
+  .file-input-display {
+    padding: 0.75rem;
+    font-size: 0.9rem;
+    text-align: center;
+    border-top: 1px solid #e2e8f0;
+    border-radius: 0 0 8px 8px;
+    background: var(--surface);
+  }
 }
 
 /* Mobile pagination styles */
 @media (max-width: 768px) {
   .form-navigation {
-    flex-direction: column;
-    gap: 1.5rem;
+    flex-direction: row !important;
+    gap: 1rem !important;
     margin-top: 1.5rem;
     padding: 0.5rem 0;
+    justify-content: center;
+    align-items: center;
   }
 
   .form-navigation button {
-    width: 50px;
-    height: 50px;
-    margin: 0 auto;
-    font-size: 18px;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+    font-size: 16px;
+    flex-shrink: 0;
   }
 
   .page-dots {
-    order: -1;
-    margin-bottom: 0.5rem;
+    order: 0;
+    margin: 0;
     padding: 0.4rem 0.8rem;
+    flex-shrink: 0;
   }
 
   .page-dots button {

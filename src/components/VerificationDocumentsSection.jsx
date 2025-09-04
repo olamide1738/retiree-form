@@ -1,3 +1,5 @@
+import FileInput from './FileInput'
+
 export default function VerificationDocumentsSection({ values, onFileChange, onChange }) {
   return (
     <fieldset className="section">
@@ -6,8 +8,7 @@ export default function VerificationDocumentsSection({ values, onFileChange, onC
       <div className="grid">
         <label className="full">
           <span>Copy of Retirement Letter / Service Certificate</span>
-          <input
-            type="file"
+          <FileInput
             name="retirementLetter"
             accept=".pdf,.jpg,.jpeg,.png"
             onChange={onFileChange}
@@ -17,8 +18,7 @@ export default function VerificationDocumentsSection({ values, onFileChange, onC
 
         <label className="full">
           <span>Birth Certificate / National ID</span>
-          <input
-            type="file"
+          <FileInput
             name="birthCertOrId"
             accept=".pdf,.jpg,.jpeg,.png"
             onChange={onFileChange}
@@ -43,8 +43,7 @@ export default function VerificationDocumentsSection({ values, onFileChange, onC
 
         <label className="full">
           <span>Passport Photograph</span>
-          <input
-            type="file"
+          <FileInput
             name="passportPhoto"
             accept="image/*"
             onChange={onFileChange}
@@ -54,8 +53,7 @@ export default function VerificationDocumentsSection({ values, onFileChange, onC
 
         <label className="full">
           <span>Any other relevant document (you can select multiple)</span>
-          <input
-            type="file"
+          <FileInput
             name="otherDocuments"
             multiple
             onChange={onFileChange}

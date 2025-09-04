@@ -9,6 +9,7 @@ import DeclarationConsentSection from './components/DeclarationConsentSection'
 import OptionalQuestionsSection from './components/OptionalQuestionsSection'
 import Dashboard from './components/Dashboard'
 import LogoHeader from './components/LogoHeader'
+import Modal from './components/Modal'
 
 function App() {
   // Pagination state
@@ -72,6 +73,28 @@ function App() {
   })
 
   const [showDashboard, setShowDashboard] = useState(false)
+  
+  // Modal state
+  const [modal, setModal] = useState({
+    isOpen: false,
+    type: 'success', // 'success' or 'error'
+    title: '',
+    message: ''
+  })
+
+  // Modal functions
+  const showModal = (type, title, message) => {
+    setModal({
+      isOpen: true,
+      type,
+      title,
+      message
+    })
+  }
+
+  const closeModal = () => {
+    setModal(prev => ({ ...prev, isOpen: false }))
+  }
 
   // Navigation functions
   const nextPage = () => {
@@ -164,13 +187,13 @@ function App() {
     if (declarationFiles.witnessSignature) formData.append('witnessSignature', declarationFiles.witnessSignature)
 
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/submissions`, {
+      const res = await fetch('/api/upload', {
         method: 'POST',
         body: formData
       })
       if (!res.ok) throw new Error('Failed to submit')
       const json = await res.json()
-      alert('Form Successfully Filled')
+      showModal('success', 'Form Submitted Successfully!', 'Your retiree verification form has been submitted successfully. Thank you for your submission.')
 
       // Reset form state for a fresh submission
       setPersonalInfo({
@@ -224,7 +247,7 @@ function App() {
       }
     } catch (e) {
       console.error(e)
-      alert('Submission failed')
+      showModal('error', 'Submission Failed', 'There was an error submitting your form. Please try again or contact support if the problem persists.')
     }
   }
 
@@ -244,40 +267,52 @@ function App() {
           <form onSubmit={handleSubmit} className="form">
             {/* Page 1: Personal Information */}
             {currentPage === 1 && (
-              <PersonalInfoSection values={personalInfo} onChange={handlePersonalChange} />
+              <div className="form-section">
+                <PersonalInfoSection values={personalInfo} onChange={handlePersonalChange} />
+              </div>
             )}
 
             {/* Page 2: Employment Information */}
             {currentPage === 2 && (
-              <EmploymentInfoSection values={employmentInfo} onChange={handleEmploymentChange} />
+              <div className="form-section">
+                <EmploymentInfoSection values={employmentInfo} onChange={handleEmploymentChange} />
+              </div>
             )}
 
             {/* Page 3: Pension Benefits */}
             {currentPage === 3 && (
-              <PensionBenefitsSection values={pensionBenefits} onChange={handlePensionChange} />
+              <div className="form-section">
+                <PensionBenefitsSection values={pensionBenefits} onChange={handlePensionChange} />
+              </div>
             )}
 
             {/* Page 4: Verification Documents */}
             {currentPage === 4 && (
-              <VerificationDocumentsSection
-                values={verificationDocs}
-                onChange={handleVerificationChange}
-                onFileChange={handleVerificationFileChange}
-              />
+              <div className="form-section">
+                <VerificationDocumentsSection
+                  values={verificationDocs}
+                  onChange={handleVerificationChange}
+                  onFileChange={handleVerificationFileChange}
+                />
+              </div>
             )}
 
             {/* Page 5: Declaration/Consent */}
             {currentPage === 5 && (
-              <DeclarationConsentSection
-                values={declarationValues}
-                onChange={handleDeclarationChange}
-                onFileChange={handleDeclarationFileChange}
-              />
+              <div className="form-section">
+                <DeclarationConsentSection
+                  values={declarationValues}
+                  onChange={handleDeclarationChange}
+                  onFileChange={handleDeclarationFileChange}
+                />
+              </div>
             )}
 
             {/* Page 6: Optional Questions */}
             {currentPage === 6 && (
-              <OptionalQuestionsSection values={optionalQuestions} onChange={handleOptionalChange} />
+              <div className="form-section">
+                <OptionalQuestionsSection values={optionalQuestions} onChange={handleOptionalChange} />
+              </div>
             )}
 
             {/* Navigation Buttons with Pagination */}
@@ -389,6 +424,16 @@ function App() {
           </form>
         </div>
       )}
+      
+      {/* Modal */}
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={closeModal}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        duration={5000}
+      />
     </div>
   )
 }
