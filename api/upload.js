@@ -90,6 +90,16 @@ export default async function handler(req, res) {
           files[field].forEach((f) => {
             // Store file as base64 in database for Vercel compatibility
             const base64Data = f.buffer.toString('base64')
+            
+            // Debug logging
+            console.log('Processing file:', {
+              field: field,
+              originalname: f.originalname,
+              bufferSize: f.buffer.length,
+              base64Length: base64Data.length,
+              base64Preview: base64Data.substring(0, 50) + '...'
+            })
+            
             fileInserts.push([submissionId, field, f.originalname, base64Data])
           })
         })
