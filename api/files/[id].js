@@ -7,10 +7,14 @@ let pool
 const initDB = async () => {
   if (!pool) {
     pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: process.env.DATABASE_URL || 'postgresql://postgres.kkuwgmttbekyxsvpmrrw:Midebobo123%@aws-1-eu-west-2.pooler.supabase.com:5432/postgres',
       ssl: {
         rejectUnauthorized: false
-      }
+      },
+      // Session pooler optimizations
+      max: 1, // Limit connections for serverless
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
     })
   }
   return pool

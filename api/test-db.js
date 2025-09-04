@@ -14,42 +14,41 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Test database connection
+    // Check if DATABASE_URL exists
+    if (!process.env.DATABASE_URL) {
+      return res.status(500).json({ 
+        error: 'DATABASE_URL environment variable not set',
+        timestamp: new Date().toISOString()
+      })
+    }
+
+    // Try to connect to database
     const pool = new Pool({
       connectionString: process.env.DATABASE_URL || 'postgresql://postgres.kkuwgmttbekyxsvpmrrw:Midebobo123%@aws-1-eu-west-2.pooler.supabase.com:5432/postgres',
       ssl: {
         rejectUnauthorized: false
       },
-      max: 1,
+      // Session pooler optimizations
+      max: 1, // Limit connections for serverless
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
     })
 
+    // Test connection
     const result = await pool.query('SELECT NOW() as current_time')
     await pool.end()
 
     res.status(200).json({ 
       status: 'OK',
-      timestamp: new Date().toISOString(),
-      message: 'Health check successful',
-      database: 'Connected',
+      database: 'Connected successfully',
       currentTime: result.rows[0].current_time,
-      environment: {
-        hasDatabaseUrl: !!process.env.DATABASE_URL,
-        nodeEnv: process.env.NODE_ENV,
-        usingSessionPooler: true
-      }
+      timestamp: new Date().toISOString()
     })
   } catch (error) {
     res.status(500).json({ 
       status: 'ERROR',
-      timestamp: new Date().toISOString(),
-      message: 'Health check failed',
       error: error.message,
-      environment: {
-        hasDatabaseUrl: !!process.env.DATABASE_URL,
-        nodeEnv: process.env.NODE_ENV
-      }
+      timestamp: new Date().toISOString()
     })
   }
 }
