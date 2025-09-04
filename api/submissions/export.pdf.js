@@ -100,53 +100,50 @@ export default async function handler(req, res) {
       doc.moveDown(1.5)
 
       // Helper function to create a section box
-      const createSection = (title, fields, startY, width, height) => {
+      const createSection = (title, fields, x, y, width, height) => {
         // Section header
-        doc.rect(50, startY, width, 20)
+        doc.rect(x, y, width, 20)
           .fillColor('#B8860B')
           .fill()
         
         doc.fillColor('white')
           .fontSize(10)
           .font('Helvetica-Bold')
-          .text(title, 55, startY + 5)
+          .text(title, x + 5, y + 5)
         
         // Section content
         doc.fillColor('black')
         doc.fontSize(8)
         doc.font('Helvetica')
         
-        let currentY = startY + 25
+        let currentY = y + 25
         fields.forEach(field => {
-          if (data[field.key] && currentY < startY + height - 10) {
+          if (data[field.key] && currentY < y + height - 10) {
             const label = field.label + ':'
             const value = String(data[field.key])
             
             // Truncate long values
-            const maxValueLength = 25
+            const maxValueLength = 20
             const truncatedValue = value.length > maxValueLength ? 
               value.substring(0, maxValueLength) + '...' : value
             
-            doc.text(`${label}`, 55, currentY)
-            doc.text(truncatedValue, 55 + 80, currentY)
+            doc.text(`${label}`, x + 5, currentY)
+            doc.text(truncatedValue, x + 70, currentY)
             currentY += 12
           }
         })
         
-        return currentY
+        return y + height + 10 // Return next Y position
       }
 
       // Two-column grid layout
       const leftColumnX = 50
       const rightColumnX = 297.5 // Half of 495 + 50
       const columnWidth = 222.5 // (495 - 50) / 2
-      const sectionHeight = 120
-      const startY = doc.y
+      const sectionHeight = 100
+      let currentY = doc.y
 
-      // Left Column
-      let currentY = startY
-      
-      // Personal Information (Left)
+      // Row 1: Personal Information (Left) & Pension Information (Right)
       if (data.fullName || data.dateOfBirth || data.gender || data.nationality) {
         const personalFields = [
           { key: 'fullName', label: 'Full Name' },
@@ -157,11 +154,21 @@ export default async function handler(req, res) {
           { key: 'phoneNumber', label: 'Phone' },
           { key: 'emailAddress', label: 'Email' }
         ]
-        currentY = createSection('PERSONAL INFO', personalFields, currentY, columnWidth, sectionHeight)
-        currentY += 10
+        currentY = createSection('PERSONAL INFO', personalFields, leftColumnX, currentY, columnWidth, sectionHeight)
       }
 
-      // Employment Information (Left)
+      if (data.pensionNumber || data.bankName || data.accountNumber) {
+        const pensionFields = [
+          { key: 'pensionNumber', label: 'Pension No' },
+          { key: 'bankName', label: 'Bank' },
+          { key: 'accountNumber', label: 'Account No' },
+          { key: 'pensionPaymentMode', label: 'Payment Mode' },
+          { key: 'bvn', label: 'BVN' }
+        ]
+        createSection('PENSION INFO', pensionFields, rightColumnX, doc.y, columnWidth, sectionHeight)
+      }
+
+      // Row 2: Employment Information (Left) & Next of Kin (Right)
       if (data.organization || data.jobTitle || data.department) {
         const employmentFields = [
           { key: 'organization', label: 'Organization' },
@@ -172,34 +179,15 @@ export default async function handler(req, res) {
           { key: 'retirementReason', label: 'Reason' },
           { key: 'lastSalaryOrGrade', label: 'Last Salary' }
         ]
-        currentY = createSection('EMPLOYMENT', employmentFields, currentY, columnWidth, sectionHeight)
-        currentY += 10
+        currentY = createSection('EMPLOYMENT', employmentFields, leftColumnX, currentY, columnWidth, sectionHeight)
       }
 
-      // Right Column
-      currentY = startY
-      
-      // Pension Information (Right)
-      if (data.pensionNumber || data.bankName || data.accountNumber) {
-        const pensionFields = [
-          { key: 'pensionNumber', label: 'Pension No' },
-          { key: 'bankName', label: 'Bank' },
-          { key: 'accountNumber', label: 'Account No' },
-          { key: 'pensionPaymentMode', label: 'Payment Mode' },
-          { key: 'bvn', label: 'BVN' }
-        ]
-        currentY = createSection('PENSION INFO', pensionFields, currentY, columnWidth, sectionHeight)
-        currentY += 10
-      }
-
-      // Next of Kin (Right)
       if (data.nextOfKinName || data.nextOfKinPhone) {
         const nextOfKinFields = [
           { key: 'nextOfKinName', label: 'Name' },
           { key: 'nextOfKinPhone', label: 'Phone' }
         ]
-        currentY = createSection('NEXT OF KIN', nextOfKinFields, currentY, columnWidth, sectionHeight)
-        currentY += 10
+        createSection('NEXT OF KIN', nextOfKinFields, rightColumnX, currentY - sectionHeight - 10, columnWidth, sectionHeight)
       }
 
       // Files Section with Images (Full Width)
