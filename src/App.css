@@ -405,6 +405,7 @@ input[type="file"]::-webkit-file-upload-button:active {
   }
   
   /* Ensure all containers have consistent mobile padding */
+  
   .container {
     padding: 0 0.5rem;
   }
@@ -1111,6 +1112,87 @@ input[type="file"]::-webkit-file-upload-button:active {
   color: #059669;
   font-size: 0.85rem;
   font-weight: 500;
+}
+
+/* Signature Mode Selector */
+.signature-mode-selector {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.signature-mode-btn {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  background: #f1f5f9;
+  color: #475569;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.signature-mode-btn:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+.signature-mode-btn.active {
+  background: var(--brand-gold);
+  color: white;
+  border-color: var(--brand-gold);
+}
+
+.signature-upload-btn {
+  padding: 0.5rem 1rem;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.signature-upload-btn:hover {
+  background: #2563eb;
+}
+
+/* Number Input Styles - Remove scroll arrows and ensure numeric input */
+.number-input {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+.number-input::-webkit-outer-spin-button,
+.number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none; /* Safari and Chrome */
+  margin: 0;
+}
+
+/* Ensure only numbers are accepted */
+.number-input[inputmode="numeric"] {
+  -webkit-text-security: none;
+}
+
+/* Prevent non-numeric input */
+.number-input {
+  caret-color: var(--brand-gold);
+}
+
+.number-input:focus {
+  outline: none;
+  border-color: var(--brand-gold);
+  box-shadow: 0 0 0 2px rgba(184, 134, 11, 0.2);
 }
 
 /* React DatePicker clear (cancel) button - remove default blue and match theme */

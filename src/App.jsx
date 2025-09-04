@@ -117,16 +117,34 @@ function App() {
 
   function handlePersonalChange(event) {
     const { name, value } = event.target
+    
+    // Validate numeric inputs
+    if ((name === 'phoneNumber' || name === 'nextOfKinPhone') && value && !/^\d*$/.test(value)) {
+      return // Don't update if non-numeric characters are entered
+    }
+    
     setPersonalInfo(prev => ({ ...prev, [name]: value }))
   }
 
   function handleEmploymentChange(event) {
     const { name, value } = event.target
+    
+    // Validate numeric inputs
+    if (name === 'lastSalaryOrGrade' && value && !/^\d*$/.test(value)) {
+      return // Don't update if non-numeric characters are entered
+    }
+    
     setEmploymentInfo(prev => ({ ...prev, [name]: value }))
   }
 
   function handlePensionChange(event) {
     const { name, value } = event.target
+    
+    // Validate numeric inputs
+    if ((name === 'pensionNumber' || name === 'accountNumber') && value && !/^\d*$/.test(value)) {
+      return // Don't update if non-numeric characters are entered
+    }
+    
     setPensionBenefits(prev => ({ ...prev, [name]: value }))
   }
 

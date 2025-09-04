@@ -68,10 +68,13 @@ export default function EmploymentInfoSection({ values, onChange }) {
           <span>Last Salary / Grade Level</span>
           <input
             type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             name="lastSalaryOrGrade"
             value={values.lastSalaryOrGrade}
             onChange={onChange}
             required
+            className="number-input"
           />
         </label>
       </div>

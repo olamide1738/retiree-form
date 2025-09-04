@@ -75,6 +75,7 @@ export default function PersonalInfoSection({ values, onChange }) {
             value={values.phoneNumber}
             onChange={onChange}
             required
+            className="number-input"
           />
         </label>
 
@@ -110,6 +111,7 @@ export default function PersonalInfoSection({ values, onChange }) {
             value={values.nextOfKinPhone}
             onChange={onChange}
             required
+            className="number-input"
           />
         </label>
       </div>

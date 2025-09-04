@@ -8,10 +8,13 @@ export default function PensionBenefitsSection({ values, onChange }) {
           <span>Pension Number (if already issued) - optional</span>
           <input
             type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
             name="pensionNumber"
             value={values.pensionNumber}
             onChange={onChange}
             placeholder="Optional"
+            className="number-input"
           />
         </label>
 
@@ -36,6 +39,7 @@ export default function PensionBenefitsSection({ values, onChange }) {
             value={values.accountNumber}
             onChange={onChange}
             required
+            className="number-input"
           />
         </label>
 
