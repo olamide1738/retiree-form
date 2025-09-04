@@ -3,7 +3,7 @@ const { Pool } = pkg
 
 let pool
 
-// Initialize database connection
+// Initialize database connection - simplified for Vercel
 const initDB = async () => {
   if (!pool) {
     pool = new Pool({
@@ -11,41 +11,14 @@ const initDB = async () => {
       ssl: {
         rejectUnauthorized: false
       },
-      // Optimized for Vercel serverless
+      // Minimal settings for Vercel
       max: 1,
       min: 0,
-      idleTimeoutMillis: 0, // Don't close idle connections
-      connectionTimeoutMillis: 10000, // Increased timeout
-      acquireTimeoutMillis: 10000, // Added acquire timeout
-      allowExitOnIdle: true, // Allow process to exit when idle
+      idleTimeoutMillis: 0,
+      connectionTimeoutMillis: 0, // No timeout
+      acquireTimeoutMillis: 0, // No timeout
+      allowExitOnIdle: true,
     })
-    
-    try {
-      // Create tables if they don't exist
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS submissions (
-          id SERIAL PRIMARY KEY,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          data_json TEXT NOT NULL
-        )
-      `)
-      
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS files (
-          id SERIAL PRIMARY KEY,
-          submission_id INTEGER NOT NULL,
-          field_name VARCHAR(255) NOT NULL,
-          original_name VARCHAR(255) NOT NULL,
-          stored_path TEXT NOT NULL,
-          FOREIGN KEY(submission_id) REFERENCES submissions(id) ON DELETE CASCADE
-        )
-      `)
-      
-      console.log('Database tables created successfully')
-    } catch (error) {
-      console.error('Error creating tables:', error)
-      // Don't throw error, just log it and continue
-    }
   }
   return pool
 }

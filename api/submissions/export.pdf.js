@@ -11,13 +11,13 @@ const initDB = async () => {
       ssl: {
         rejectUnauthorized: false
       },
-      // Optimized for Vercel serverless
+      // Minimal settings for Vercel
       max: 1,
       min: 0,
-      idleTimeoutMillis: 0, // Don't close idle connections
-      connectionTimeoutMillis: 10000, // Increased timeout
-      acquireTimeoutMillis: 10000, // Added acquire timeout
-      allowExitOnIdle: true, // Allow process to exit when idle
+      idleTimeoutMillis: 0,
+      connectionTimeoutMillis: 0, // No timeout
+      acquireTimeoutMillis: 0, // No timeout
+      allowExitOnIdle: true,
     })
   }
   return pool
