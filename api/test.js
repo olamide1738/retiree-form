@@ -3,6 +3,7 @@ export default function handler(req, res) {
     message: 'API is working!',
     timestamp: new Date().toISOString(),
     method: req.method,
-    url: req.url
+    url: req.url,
+    environment: process.env.NODE_ENV
   })
 }
