@@ -301,7 +301,6 @@ app.get('/api/submissions/export', async (_req, res) => {
       ['Bank Name', 'bankName'],
       ['Account Number', 'accountNumber'],
       ['Payment Mode', 'pensionPaymentMode'],
-      ['BVN', 'bvn'],
       ['Confirm Accuracy', 'confirmAccuracy'],
       ['Declaration Date', 'declarationDate'],
       ['Witness Name', 'witnessName'],
@@ -405,7 +404,6 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
         bankName: 'Bank Name',
         accountNumber: 'Account Number',
         pensionPaymentMode: 'Mode of Pension Payment',
-        bvn: 'Bank Verification Number (BVN)',
         preferredCommunication: 'Preferred Mode of Communication',
         healthStatus: 'Health Status',
         additionalComments: 'Additional Comments',
@@ -485,7 +483,7 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
       // Pension/Benefits Information Section
       doc.fontSize(12).text('PENSION/BENEFITS INFORMATION', { underline: true })
       doc.moveDown(0.5)
-      const pensionFields = ['pensionNumber', 'bankName', 'accountNumber', 'pensionPaymentMode', 'bvn']
+        const pensionFields = ['pensionNumber', 'bankName', 'accountNumber', 'pensionPaymentMode']
       pensionFields.forEach(key => {
         if (data[key] !== undefined) {
           doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)

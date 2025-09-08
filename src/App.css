@@ -46,6 +46,47 @@ body {
   border-radius: 999px;
 }
 
+/* Logo header styling */
+.brand {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.brand img {
+  transition: transform 0.2s ease;
+}
+
+.brand img:hover {
+  transform: scale(1.05);
+}
+
+/* Responsive logo layout */
+@media (max-width: 768px) {
+  .brand {
+    gap: 1rem;
+  }
+  
+  .brand img {
+    width: 80px !important;
+    height: 80px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .brand {
+    gap: 0.5rem;
+  }
+  
+  .brand img {
+    width: 60px !important;
+    height: 60px !important;
+  }
+}
+
 .form {
   display: flex;
   flex-direction: column;

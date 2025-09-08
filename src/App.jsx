@@ -45,9 +45,7 @@ function App() {
     pensionPaymentMode: ''
   })
 
-  const [verificationDocs, setVerificationDocs] = useState({
-    bvn: ''
-  })
+  const [verificationDocs, setVerificationDocs] = useState({})
   const [verificationFiles, setVerificationFiles] = useState({
     retirementLetter: null,
     birthCertOrId: null,
@@ -240,7 +238,7 @@ function App() {
         accountNumber: '',
         pensionPaymentMode: ''
       })
-      setVerificationDocs({ bvn: '' })
+      setVerificationDocs({})
       setVerificationFiles({
         retirementLetter: null,
         birthCertOrId: null,

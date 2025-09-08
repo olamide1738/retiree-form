@@ -26,21 +26,6 @@ export default function VerificationDocumentsSection({ values, onFileChange, onC
           />
         </label>
 
-        <label>
-          <span>Bank Verification Number (BVN)</span>
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]{11}"
-            name="bvn"
-            value={values.bvn}
-            onChange={onChange}
-            required
-            maxLength="11"
-            minLength="11"
-          />
-        </label>
-
         <label className="full">
           <span>Passport Photograph</span>
           <FileInput
