@@ -382,33 +382,156 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
     const doc = new PDFDocument({ margin: 40, size: 'A4' })
     doc.pipe(res)
 
-    doc.fontSize(16).text('Submissions Report', { align: 'center' })
-    doc.moveDown()
+    // Helper function to format field names
+    const formatFieldName = (key) => {
+      const fieldMap = {
+        fullName: 'Full Name',
+        dateOfBirth: 'Date of Birth',
+        gender: 'Gender',
+        nationality: 'Nationality',
+        residentialAddress: 'Residential Address',
+        phoneNumber: 'Phone Number',
+        emailAddress: 'Email Address',
+        nextOfKinName: 'Next of Kin Name',
+        nextOfKinPhone: 'Next of Kin Phone Number',
+        organization: 'Organization',
+        jobTitle: 'Job Title at Retirement',
+        department: 'Department/Unit',
+        dateOfEmployment: 'Date of Employment',
+        dateOfRetirement: 'Date of Retirement',
+        retirementReason: 'Reason for Retirement',
+        lastSalaryOrGrade: 'Last Salary/Grade Level',
+        pensionNumber: 'Pension Number',
+        bankName: 'Bank Name',
+        accountNumber: 'Account Number',
+        pensionPaymentMode: 'Mode of Pension Payment',
+        bvn: 'Bank Verification Number (BVN)',
+        preferredCommunication: 'Preferred Mode of Communication',
+        healthStatus: 'Health Status',
+        additionalComments: 'Additional Comments',
+        confirmAccuracy: 'Confirmation of Accuracy',
+        declarationDate: 'Declaration Date',
+        witnessName: 'Witness/HR Officer Name',
+        witnessDate: 'Witness/HR Officer Date'
+      }
+      return fieldMap[key] || key
+    }
+
+    // Helper function to format values
+    const formatValue = (key, value) => {
+      if (!value || value === '') return 'Not provided'
+      
+      // Format dates
+      if (key.includes('Date') || key.includes('date')) {
+        const date = new Date(value)
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })
+        }
+      }
+      
+      return String(value)
+    }
+
+    doc.fontSize(20).text('RETIREE FORM SUBMISSIONS REPORT', { align: 'center' })
+    doc.fontSize(12).text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })}`, { align: 'center' })
+    doc.moveDown(2)
 
     submissions.forEach((row, index) => {
       const data = JSON.parse(row.data_json || '{}')
-      doc.fontSize(12).text(`Submission #${row.id} — ${row.created_at}`)
-      const entries = Object.entries(data)
-      entries.forEach(([k, v]) => {
-        doc.fontSize(10).text(`${k}: ${v ?? ''}`)
-      })
+      
+      // Submission header
+      doc.fontSize(14).text(`SUBMISSION #${row.id}`, { underline: true })
+      doc.fontSize(10).text(`Submitted: ${new Date(row.created_at).toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`)
+      doc.moveDown(1)
 
+      // Personal Information Section
+      doc.fontSize(12).text('PERSONAL INFORMATION', { underline: true })
+      doc.moveDown(0.5)
+      const personalFields = ['fullName', 'dateOfBirth', 'gender', 'nationality', 'residentialAddress', 'phoneNumber', 'emailAddress', 'nextOfKinName', 'nextOfKinPhone']
+      personalFields.forEach(key => {
+        if (data[key] !== undefined) {
+          doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
+        }
+      })
+      doc.moveDown(1)
+
+      // Employment Information Section
+      doc.fontSize(12).text('EMPLOYMENT INFORMATION', { underline: true })
+      doc.moveDown(0.5)
+      const employmentFields = ['organization', 'jobTitle', 'department', 'dateOfEmployment', 'dateOfRetirement', 'retirementReason', 'lastSalaryOrGrade']
+      employmentFields.forEach(key => {
+        if (data[key] !== undefined) {
+          doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
+        }
+      })
+      doc.moveDown(1)
+
+      // Pension/Benefits Information Section
+      doc.fontSize(12).text('PENSION/BENEFITS INFORMATION', { underline: true })
+      doc.moveDown(0.5)
+      const pensionFields = ['pensionNumber', 'bankName', 'accountNumber', 'pensionPaymentMode', 'bvn']
+      pensionFields.forEach(key => {
+        if (data[key] !== undefined) {
+          doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
+        }
+      })
+      doc.moveDown(1)
+
+      // Optional Questions Section
+      doc.fontSize(12).text('ADDITIONAL INFORMATION', { underline: true })
+      doc.moveDown(0.5)
+      const optionalFields = ['preferredCommunication', 'healthStatus', 'additionalComments']
+      optionalFields.forEach(key => {
+        if (data[key] !== undefined) {
+          doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
+        }
+      })
+      doc.moveDown(1)
+
+      // Declaration/Consent Section
+      doc.fontSize(12).text('DECLARATION/CONSENT', { underline: true })
+      doc.moveDown(0.5)
+      const declarationFields = ['confirmAccuracy', 'declarationDate', 'witnessName', 'witnessDate']
+      declarationFields.forEach(key => {
+        if (data[key] !== undefined) {
+          doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
+        }
+      })
+      doc.moveDown(1)
+
+      // Files Section
       const submissionFiles = filesBySubmission[row.id] || []
       if (submissionFiles.length) {
-        doc.moveDown(0.25)
-        doc.fontSize(11).text('Files:', { underline: true })
+        doc.fontSize(12).text('UPLOADED DOCUMENTS', { underline: true })
+        doc.moveDown(0.5)
         submissionFiles.forEach(f => {
-          const url = `${req.protocol}://${req.get('host')}/api/files/${f.id}`
-          doc.fontSize(10).text(`- ${f.field_name}: ${f.original_name}`)
-          doc.fontSize(9).fillColor('#1565c0').text(url)
+          const url = `${_req.protocol}://${_req.get('host')}/api/files/${f.id}`
+          doc.fontSize(10).text(`• ${formatFieldName(f.field_name)}: ${f.original_name}`)
+          doc.fontSize(9).fillColor('#1565c0').text(`   Download: ${url}`)
           doc.fillColor('black')
         })
+        doc.moveDown(1)
       }
 
+      // Page break for next submission (except last one)
       if (index < submissions.length - 1) {
-        doc.moveDown()
-        doc.moveTo(40, doc.y).lineTo(555, doc.y).stroke()
-        doc.moveDown()
+        doc.addPage()
       }
     })
 
