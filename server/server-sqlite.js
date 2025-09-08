@@ -456,12 +456,63 @@ app.get('/api/submissions/export.pdf', (_req, res) => {
         if (files.length) {
           doc.fontSize(12).text('UPLOADED DOCUMENTS', { underline: true })
           doc.moveDown(0.5)
+          
+          // Define all possible file fields with their proper labels
+          const fileFieldLabels = {
+            retirementLetter: 'Copy of Retirement Letter / Service Certificate',
+            birthCertOrId: 'Birth Certificate / National ID',
+            passportPhoto: 'Passport Photograph',
+            otherDocuments: 'Other Relevant Documents',
+            declarantSignature: 'Declarant Signature',
+            witnessSignature: 'Witness / HR Officer Signature'
+          }
+          
+          // Group files by field name
+          const filesByField = {}
           files.forEach(f => {
-            const url = `http://localhost:4000/api/files/${f.id}`
-            doc.fontSize(10).text(`• ${formatFieldName(f.field_name)}: ${f.original_name}`)
-            doc.fontSize(9).fillColor('#1565c0').text(`   Download: ${url}`)
-            doc.fillColor('black')
+            if (!filesByField[f.field_name]) filesByField[f.field_name] = []
+            filesByField[f.field_name].push(f)
           })
+          
+          // Display each file field category
+          Object.keys(fileFieldLabels).forEach(fieldName => {
+            const fieldFiles = filesByField[fieldName] || []
+            if (fieldFiles.length > 0) {
+              doc.fontSize(11).text(`${fileFieldLabels[fieldName]}:`, { underline: false })
+              fieldFiles.forEach(f => {
+                const url = `http://localhost:4000/api/files/${f.id}`
+                doc.fontSize(10).text(`  • ${f.original_name}`)
+                doc.fontSize(9).fillColor('#1565c0').text(`    Download: ${url}`)
+                doc.fillColor('black')
+              })
+              doc.moveDown(0.3)
+            } else {
+              // Show field as "Not provided" if no files uploaded
+              doc.fontSize(10).text(`${fileFieldLabels[fieldName]}: Not provided`)
+              doc.moveDown(0.3)
+            }
+          })
+          
+          doc.moveDown(1)
+        } else {
+          // Show all file fields as "Not provided" if no files at all
+          doc.fontSize(12).text('UPLOADED DOCUMENTS', { underline: true })
+          doc.moveDown(0.5)
+          
+          const fileFieldLabels = {
+            retirementLetter: 'Copy of Retirement Letter / Service Certificate',
+            birthCertOrId: 'Birth Certificate / National ID',
+            passportPhoto: 'Passport Photograph',
+            otherDocuments: 'Other Relevant Documents',
+            declarantSignature: 'Declarant Signature',
+            witnessSignature: 'Witness / HR Officer Signature'
+          }
+          
+          Object.values(fileFieldLabels).forEach(label => {
+            doc.fontSize(10).text(`${label}: Not provided`)
+            doc.moveDown(0.3)
+          })
+          
           doc.moveDown(1)
         }
 
