@@ -153,7 +153,22 @@ export default function Dashboard() {
     </div>
   )
 
-  if (!rows.length) return <p>No submissions yet.</p>
+  if (!rows.length) return (
+    <div style={{
+      textAlign: 'center',
+      padding: '60px 20px',
+      backgroundColor: 'white',
+      borderRadius: '8px',
+      border: '1px solid #e2e8f0',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+    }}>
+      <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📝</div>
+      <h3 style={{ margin: '0 0 10px 0', color: 'var(--brand-brown)' }}>No Submissions Yet</h3>
+      <p style={{ margin: '0', color: 'var(--muted)', fontSize: '1rem' }}>
+        When users submit the retiree form, their submissions will appear here.
+      </p>
+    </div>
+  )
 
   const allKeys = Array.from(
     rows.reduce((set, r) => {
@@ -175,7 +190,23 @@ export default function Dashboard() {
         flexWrap: 'wrap',
         gap: '10px'
       }}>
-        <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Submissions Dashboard</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Submissions Dashboard</h2>
+          <div style={{
+            backgroundColor: 'var(--brand-gold)',
+            color: 'white',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            fontSize: '0.9rem',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}>
+            <span>📊</span>
+            <span>{rows.length} {rows.length === 1 ? 'Submission' : 'Submissions'}</span>
+          </div>
+        </div>
         <div className="dashboard-actions" style={{ 
           display: 'flex', 
           gap: '10px',
@@ -243,6 +274,22 @@ export default function Dashboard() {
             Logout
           </button>
           <button 
+            onClick={loadSubmissions}
+            style={{
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#2563eb'}
+            onMouseOut={(e) => e.target.style.backgroundColor = '#3b82f6'}
+          >
+            🔄 Refresh
+          </button>
+          <button 
             onClick={clearAllSubmissions}
             style={{
               backgroundColor: '#dc2626',
@@ -258,6 +305,82 @@ export default function Dashboard() {
           >
             Clear All Submissions
           </button>
+        </div>
+      </div>
+
+      {/* Statistics Cards */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '15px',
+        marginBottom: '25px'
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          border: '1px solid #e2e8f0',
+          borderRadius: '8px',
+          padding: '20px',
+          textAlign: 'center',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📝</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--brand-brown)', marginBottom: '4px' }}>
+            {rows.length}
+          </div>
+          <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
+            Total Submissions
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: 'white',
+          border: '1px solid #e2e8f0',
+          borderRadius: '8px',
+          padding: '20px',
+          textAlign: 'center',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📁</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--brand-brown)', marginBottom: '4px' }}>
+            {rows.reduce((total, r) => total + (r.files?.length || 0), 0)}
+          </div>
+          <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
+            Files Uploaded
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: 'white',
+          border: '1px solid #e2e8f0',
+          borderRadius: '8px',
+          padding: '20px',
+          textAlign: 'center',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📅</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--brand-brown)', marginBottom: '4px' }}>
+            {rows.length > 0 ? new Date(Math.max(...rows.map(r => new Date(r.createdAt).getTime()))).toLocaleDateString() : '—'}
+          </div>
+          <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
+            Latest Submission
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: 'white',
+          border: '1px solid #e2e8f0',
+          borderRadius: '8px',
+          padding: '20px',
+          textAlign: 'center',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        }}>
+          <div style={{ fontSize: '2rem', marginBottom: '8px' }}>⚡</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--brand-brown)', marginBottom: '4px' }}>
+            {rows.length > 0 ? Math.round(rows.length / Math.max(1, Math.ceil((Date.now() - new Date(Math.min(...rows.map(r => new Date(r.createdAt).getTime()))).getTime()) / (1000 * 60 * 60 * 24)))) : 0}
+          </div>
+          <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
+            Avg/Day
+          </div>
         </div>
       </div>
 

@@ -23,7 +23,7 @@ export default function DeclarationConsentSection({ values, onChange, onFileChan
         </label>
 
         <label className="full">
-          <span>Your Signature</span>
+          <span>Your Signature(You can draw your signature here or upload a file)</span>
           <SignatureInput
             name="declarantSignature"
             onChange={onFileChange}
