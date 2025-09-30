@@ -1,3 +1,43 @@
+.form-type-dropdown {
+  /* ...existing styles... */
+  text-align: center;
+}
+
+.form-type-dropdown option {
+  color: #374151;
+  background: var(--brand-gold);
+}
+
+.form-type-dropdown option:hover, .form-type-dropdown option:focus {
+  color: #fff;
+  background: var(--brand-gold-600);
+}
+/* Styled dropdown for form type selection */
+.form-type-dropdown {
+  background: var(--brand-gold);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: transform .05s ease, background-color .2s ease, box-shadow .2s ease;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  min-width: 180px;
+  appearance: none;
+}
+
+.form-type-dropdown:hover, .form-type-dropdown:focus {
+  background: var(--brand-gold-600);
+  color: #fff;
+}
+
+.form-type-dropdown:active {
+  transform: translateY(1px);
+}
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {

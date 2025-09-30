@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import './App.css'
 import PersonalInfoSection from './components/PersonalInfoSection'
@@ -6,12 +5,15 @@ import EmploymentInfoSection from './components/EmploymentInfoSection'
 import PensionBenefitsSection from './components/PensionBenefitsSection'
 import VerificationDocumentsSection from './components/VerificationDocumentsSection'
 import DeclarationConsentSection from './components/DeclarationConsentSection'
+import DeclarationConsentSectionOnline from './components/DeclarationConsentSectionOnline'
 import OptionalQuestionsSection from './components/OptionalQuestionsSection'
 import Dashboard from './components/Dashboard'
 import LogoHeader from './components/LogoHeader'
 import Modal from './components/Modal'
 
 function App() {
+  // Form type: 'physical' or 'online'
+  const [formType, setFormType] = useState('physical')
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const totalPages = 6
@@ -186,7 +188,8 @@ function App() {
       ...pensionBenefits,
       ...verificationDocs,
       ...declarationValues,
-      ...optionalQuestions
+      ...optionalQuestions,
+      formType
     }
     Object.entries(allText).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
@@ -271,7 +274,7 @@ function App() {
     <div className="container">
       <LogoHeader />
       <h1>Retiree Verification Form</h1>
-      <div className="actions" style={{ marginBottom: '1rem' }}>
+      <div className="actions" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'center' }}>
         <button type="button" onClick={() => setShowDashboard(false)} className="nav-button" title="Form">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -281,6 +284,17 @@ function App() {
             <polyline points="10,9 9,9 8,9"/>
           </svg>
         </button>
+        {/* Form type dropdown */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <select
+            value={formType}
+            onChange={e => setFormType(e.target.value)}
+            className="form-type-dropdown"
+          >
+            <option value="physical">Physical Registration</option>
+            <option value="online">Online Registration</option>
+          </select>
+        </div>
         <button type="button" onClick={() => setShowDashboard(true)} className="nav-button" title="Dashboard">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="3" width="7" height="7"/>
@@ -296,6 +310,9 @@ function App() {
       ) : (
         <div>
           <form onSubmit={handleSubmit} className="form">
+            {/* Hidden field to track form type */}
+            <input type="hidden" name="formType" value={formType} />
+
             {/* Page 1: Personal Information */}
             {currentPage === 1 && (
               <div className="form-section">
@@ -331,11 +348,19 @@ function App() {
             {/* Page 5: Declaration/Consent */}
             {currentPage === 5 && (
               <div className="form-section">
-                <DeclarationConsentSection
-                  values={declarationValues}
-                  onChange={handleDeclarationChange}
-                  onFileChange={handleDeclarationFileChange}
-                />
+                {formType === 'physical' ? (
+                  <DeclarationConsentSection
+                    values={declarationValues}
+                    onChange={handleDeclarationChange}
+                    onFileChange={handleDeclarationFileChange}
+                  />
+                ) : (
+                  <DeclarationConsentSectionOnline
+                    values={declarationValues}
+                    onChange={handleDeclarationChange}
+                    onFileChange={handleDeclarationFileChange}
+                  />
+                )}
               </div>
             )}
 
