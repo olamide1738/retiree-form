@@ -163,12 +163,12 @@ app.delete('/api/submissions/:id', async (req, res) => {
     })
     
     // Delete from database (files will be deleted due to foreign key constraint)
-    const [deleteResult] = await pool.query(
-      'DELETE FROM submissions WHERE id = ?',
+    const deleteResult = await pool.query(
+      'DELETE FROM submissions WHERE id = $1',
       [submissionId]
     )
     
-    if (deleteResult.affectedRows === 0) {
+    if (deleteResult.rowCount === 0) {
       return res.status(404).json({ error: 'Submission not found' })
     }
     
