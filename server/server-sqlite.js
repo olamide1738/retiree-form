@@ -245,12 +245,10 @@ app.get('/api/submissions/export', (_req, res) => {
         ['Date of Employment', 'dateOfEmployment'],
         ['Date of Retirement', 'dateOfRetirement'],
         ['Retirement Reason', 'retirementReason'],
-        ['Last Salary', 'lastSalary'],
         ['Grade Level', 'gradeLevel'],
         ['Pension Number', 'pensionNumber'],
-        ['Bank Name', 'bankName'],
-        ['Account Number', 'accountNumber'],
-        ['Payment Mode', 'pensionPaymentMode'],
+        ['Pension Fund Administrator', 'pensionFundAdministrator'],
+        ['PMO Officer', 'pmoOfficer'],
         ['Confirm Accuracy', 'confirmAccuracy'],
         ['Declaration Date', 'declarationDate'],
         ['Witness Name', 'witnessName'],
@@ -336,12 +334,10 @@ app.get('/api/submissions/export.pdf', (_req, res) => {
           dateOfEmployment: 'Date of Employment',
           dateOfRetirement: 'Date of Retirement',
           retirementReason: 'Reason for Retirement',
-          lastSalary: 'Last Salary',
           gradeLevel: 'Grade Level',
           pensionNumber: 'Pension Number',
-          bankName: 'Bank Name',
-          accountNumber: 'Account Number',
-          pensionPaymentMode: 'Mode of Pension Payment',
+          pensionFundAdministrator: 'Pension Fund Administrator',
+          pmoOfficer: 'PMO Officer',
           preferredCommunication: 'Preferred Mode of Communication',
           healthStatus: 'Health Status',
           additionalComments: 'Additional Comments',
@@ -410,7 +406,7 @@ app.get('/api/submissions/export.pdf', (_req, res) => {
         // Employment Information Section
         doc.fontSize(12).text('EMPLOYMENT INFORMATION', { underline: true })
         doc.moveDown(0.5)
-        const employmentFields = ['organization', 'jobTitle', 'department', 'dateOfEmployment', 'dateOfRetirement', 'retirementReason', 'lastSalary', 'gradeLevel']
+        const employmentFields = ['organization', 'jobTitle', 'department', 'dateOfEmployment', 'dateOfRetirement', 'retirementReason', 'gradeLevel']
         employmentFields.forEach(key => {
           if (data[key] !== undefined) {
             doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
@@ -421,7 +417,7 @@ app.get('/api/submissions/export.pdf', (_req, res) => {
         // Pension/Benefits Information Section
         doc.fontSize(12).text('PENSION/BENEFITS INFORMATION', { underline: true })
         doc.moveDown(0.5)
-        const pensionFields = ['pensionNumber', 'bankName', 'accountNumber', 'pensionPaymentMode']
+        const pensionFields = ['pensionNumber', 'pensionFundAdministrator']
         pensionFields.forEach(key => {
           if (data[key] !== undefined) {
             doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
@@ -432,7 +428,7 @@ app.get('/api/submissions/export.pdf', (_req, res) => {
         // Optional Questions Section
         doc.fontSize(12).text('ADDITIONAL INFORMATION', { underline: true })
         doc.moveDown(0.5)
-        const optionalFields = ['preferredCommunication', 'healthStatus', 'additionalComments']
+        const optionalFields = ['pmoOfficer', 'preferredCommunication', 'healthStatus', 'additionalComments']
         optionalFields.forEach(key => {
           if (data[key] !== undefined) {
             doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)

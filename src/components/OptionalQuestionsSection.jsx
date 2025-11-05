@@ -4,6 +4,19 @@ export default function OptionalQuestionsSection({ values, onChange }) {
       <legend>Optional Questions</legend>
 
       <div className="grid">
+        <label className="full">
+          <span>PMO Officer</span>
+          <input
+            type="text"
+            name="pmoOfficer"
+            value={values.pmoOfficer}
+            onChange={onChange}
+            required
+            pattern="[A-Za-z\s\-']+"
+            title="Letters, spaces, hyphen and apostrophe only"
+          />
+        </label>
+
         <label>
           <span>Preferred Mode of Communication</span>
           <select

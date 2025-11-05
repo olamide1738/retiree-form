@@ -35,15 +35,12 @@ function App() {
     dateOfEmployment: '',
     dateOfRetirement: '',
     retirementReason: '',
-    lastSalary: '',
     gradeLevel: ''
   })
 
   const [pensionBenefits, setPensionBenefits] = useState({
     pensionNumber: '',
-    bankName: '',
-    accountNumber: '',
-    pensionPaymentMode: ''
+    pensionFundAdministrator: ''
   })
 
   const [verificationDocs, setVerificationDocs] = useState({})
@@ -55,6 +52,7 @@ function App() {
   })
 
   const [optionalQuestions, setOptionalQuestions] = useState({
+    pmoOfficer: '',
     preferredCommunication: '',
     healthStatus: '',
     additionalComments: ''
@@ -229,16 +227,6 @@ function App() {
   function handlePensionChange(event) {
     const { name, value } = event.target
     
-    // Account number: digits only and max length 10 while typing
-    if (name === 'accountNumber') {
-      if (value && !/^\d*$/.test(value)) {
-        setFieldError(name, 'Digits only (0-9) are allowed')
-        return
-      }
-      clearFieldError(name)
-      if (value.length > 10) return
-    }
-    
     // Pension number: alphanumeric only
     if (name === 'pensionNumber') {
       if (value && !/^[A-Za-z0-9]*$/.test(value)) {
@@ -267,6 +255,11 @@ function App() {
 
   function handleOptionalChange(event) {
     const { name, value } = event.target
+    if (name === 'pmoOfficer') {
+      if (value && !/^[A-Za-z\s\-']*$/.test(value)) {
+        return
+      }
+    }
     setOptionalQuestions(prev => ({ ...prev, [name]: value }))
   }
 
@@ -323,14 +316,11 @@ function App() {
         dateOfEmployment: '',
         dateOfRetirement: '',
         retirementReason: '',
-        lastSalary: '',
         gradeLevel: ''
       })
       setPensionBenefits({
         pensionNumber: '',
-        bankName: '',
-        accountNumber: '',
-        pensionPaymentMode: ''
+        pensionFundAdministrator: ''
       })
       setVerificationDocs({})
       setVerificationFiles({
@@ -340,6 +330,7 @@ function App() {
         otherDocuments: []
       })
       setOptionalQuestions({
+        pmoOfficer: '',
         preferredCommunication: '',
         healthStatus: '',
         additionalComments: ''

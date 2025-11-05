@@ -65,17 +65,6 @@ export default function EmploymentInfoSection({ values, onChange, errors }) {
         </label>
 
         <label>
-          <span>Last Salary</span>
-          <input
-            type="text"
-            name="lastSalary"
-            value={values.lastSalary}
-            onChange={onChange}
-            required
-          />
-        </label>
-
-        <label>
           <span>Grade Level</span>
           <input
             type="text"
