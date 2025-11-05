@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 import PersonalInfoSection from './components/PersonalInfoSection'
 import EmploymentInfoSection from './components/EmploymentInfoSection'
@@ -86,6 +86,83 @@ function App() {
     setModal(prev => ({ ...prev, isOpen: false }))
   }
 
+  // Persist form data across refresh using localStorage
+  const STORAGE_KEYS = {
+    formType: 'rf_formType',
+    currentPage: 'rf_currentPage',
+    personalInfo: 'rf_personalInfo',
+    employmentInfo: 'rf_employmentInfo',
+    pensionBenefits: 'rf_pensionBenefits',
+    verificationDocs: 'rf_verificationDocs',
+    optionalQuestions: 'rf_optionalQuestions',
+  }
+
+  const safeParse = (raw, fallback) => {
+    try {
+      const v = JSON.parse(raw)
+      return v ?? fallback
+    } catch {
+      return fallback
+    }
+  }
+
+  // Hydrate state from storage on mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const s = window.localStorage
+    const ft = s.getItem(STORAGE_KEYS.formType)
+    if (ft) setFormType(ft)
+    const cp = s.getItem(STORAGE_KEYS.currentPage)
+    if (cp && !Number.isNaN(Number(cp))) setCurrentPage(Math.max(1, Math.min(5, Number(cp))))
+
+    const p = s.getItem(STORAGE_KEYS.personalInfo)
+    if (p) setPersonalInfo(prev => ({ ...prev, ...safeParse(p, {}) }))
+    const e = s.getItem(STORAGE_KEYS.employmentInfo)
+    if (e) setEmploymentInfo(prev => ({ ...prev, ...safeParse(e, {}) }))
+    const pb = s.getItem(STORAGE_KEYS.pensionBenefits)
+    if (pb) setPensionBenefits(prev => ({ ...prev, ...safeParse(pb, {}) }))
+    const vd = s.getItem(STORAGE_KEYS.verificationDocs)
+    if (vd) setVerificationDocs(prev => ({ ...prev, ...safeParse(vd, {}) }))
+    const oq = s.getItem(STORAGE_KEYS.optionalQuestions)
+    if (oq) setOptionalQuestions(prev => ({ ...prev, ...safeParse(oq, {}) }))
+  }, [])
+
+  // Save slices to storage when they change
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEYS.formType, String(formType))
+  }, [formType])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEYS.currentPage, String(currentPage))
+  }, [currentPage])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEYS.personalInfo, JSON.stringify(personalInfo))
+  }, [personalInfo])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEYS.employmentInfo, JSON.stringify(employmentInfo))
+  }, [employmentInfo])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEYS.pensionBenefits, JSON.stringify(pensionBenefits))
+  }, [pensionBenefits])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEYS.verificationDocs, JSON.stringify(verificationDocs))
+  }, [verificationDocs])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(STORAGE_KEYS.optionalQuestions, JSON.stringify(optionalQuestions))
+  }, [optionalQuestions])
+
   // Navigation functions
   const nextPage = () => {
     if (currentPage < totalPages) {
@@ -152,14 +229,23 @@ function App() {
   function handlePensionChange(event) {
     const { name, value } = event.target
     
-    // Validate numeric inputs
-    if (name === 'pensionNumber' || name === 'accountNumber') {
+    // Account number: digits only and max length 10 while typing
+    if (name === 'accountNumber') {
       if (value && !/^\d*$/.test(value)) {
         setFieldError(name, 'Digits only (0-9) are allowed')
         return
       }
       clearFieldError(name)
-      if (name === 'accountNumber' && value.length > 10) return
+      if (value.length > 10) return
+    }
+    
+    // Pension number: alphanumeric only
+    if (name === 'pensionNumber') {
+      if (value && !/^[A-Za-z0-9]*$/.test(value)) {
+        setFieldError(name, 'Letters and numbers only are allowed')
+        return
+      }
+      clearFieldError(name)
     }
     
     setPensionBenefits(prev => ({ ...prev, [name]: value }))
@@ -259,6 +345,16 @@ function App() {
         additionalComments: ''
       })
       setErrors({})
+      // Clear persisted state for next user
+      if (typeof window !== 'undefined') {
+        const s = window.localStorage
+        s.removeItem(STORAGE_KEYS.personalInfo)
+        s.removeItem(STORAGE_KEYS.employmentInfo)
+        s.removeItem(STORAGE_KEYS.pensionBenefits)
+        s.removeItem(STORAGE_KEYS.verificationDocs)
+        s.removeItem(STORAGE_KEYS.optionalQuestions)
+        s.setItem(STORAGE_KEYS.currentPage, '1')
+      }
       // Clear native file inputs in the DOM
       if (event.target && typeof event.target.reset === 'function') {
         event.target.reset()
