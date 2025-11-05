@@ -120,6 +120,7 @@ function App() {
 
   function handlePersonalChange(event) {
     const { name, value } = event.target
+    if (value) event.target.classList.remove('dirty')
     
     // Validate numeric inputs
     if ((name === 'phoneNumber' || name === 'nextOfKinPhone')) {
@@ -136,6 +137,7 @@ function App() {
 
   function handleEmploymentChange(event) {
     const { name, value } = event.target
+    if (value) event.target.classList.remove('dirty')
     
     // Grade level should be numeric digits only
     if (name === 'gradeLevel') {
@@ -151,6 +153,7 @@ function App() {
 
   function handlePensionChange(event) {
     const { name, value } = event.target
+    if (value) event.target.classList.remove('dirty')
     
     // Validate numeric inputs
     if (name === 'pensionNumber' || name === 'accountNumber') {
@@ -167,11 +170,13 @@ function App() {
 
   function handleVerificationChange(event) {
     const { name, value } = event.target
+    if (value) event.target.classList.remove('dirty')
     setVerificationDocs(prev => ({ ...prev, [name]: value }))
   }
 
   function handleVerificationFileChange(event) {
     const { name, files } = event.target
+    if (files && files.length) event.target.classList.remove('dirty')
     if (name === 'otherDocuments') {
       setVerificationFiles(prev => ({ ...prev, [name]: Array.from(files) }))
     } else {
@@ -181,6 +186,7 @@ function App() {
 
   function handleOptionalChange(event) {
     const { name, value } = event.target
+    if (value) event.target.classList.remove('dirty')
     setOptionalQuestions(prev => ({ ...prev, [name]: value }))
   }
 
@@ -190,6 +196,15 @@ function App() {
     const tag = el.tagName
     if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
       el.classList.add('dirty')
+    }
+  }
+
+  function handleFieldInput(event) {
+    const el = event.target
+    if (!el) return
+    const tag = el.tagName
+    if ((tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') && el.value) {
+      el.classList.remove('dirty')
     }
   }
 
@@ -321,7 +336,7 @@ function App() {
         <Dashboard />
       ) : (
         <div>
-          <form onSubmit={handleSubmit} onBlur={handleFieldBlur} className="form">
+          <form onSubmit={handleSubmit} onBlur={handleFieldBlur} onInput={handleFieldInput} className="form">
             {/* Hidden field to track form type */}
             <input type="hidden" name="formType" value={formType} />
 
