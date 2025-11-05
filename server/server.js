@@ -296,7 +296,8 @@ app.get('/api/submissions/export', async (_req, res) => {
       ['Date of Employment', 'dateOfEmployment'],
       ['Date of Retirement', 'dateOfRetirement'],
       ['Retirement Reason', 'retirementReason'],
-      ['Last Salary / Grade', 'lastSalaryOrGrade'],
+      ['Last Salary', 'lastSalary'],
+      ['Grade Level', 'gradeLevel'],
       ['Pension Number', 'pensionNumber'],
       ['Bank Name', 'bankName'],
       ['Account Number', 'accountNumber'],
@@ -399,7 +400,8 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
         dateOfEmployment: 'Date of Employment',
         dateOfRetirement: 'Date of Retirement',
         retirementReason: 'Reason for Retirement',
-        lastSalaryOrGrade: 'Last Salary/Grade Level',
+        lastSalary: 'Last Salary',
+        gradeLevel: 'Grade Level',
         pensionNumber: 'Pension Number',
         bankName: 'Bank Name',
         accountNumber: 'Account Number',
@@ -472,7 +474,7 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
       // Employment Information Section
       doc.fontSize(12).text('EMPLOYMENT INFORMATION', { underline: true })
       doc.moveDown(0.5)
-      const employmentFields = ['organization', 'jobTitle', 'department', 'dateOfEmployment', 'dateOfRetirement', 'retirementReason', 'lastSalaryOrGrade']
+      const employmentFields = ['organization', 'jobTitle', 'department', 'dateOfEmployment', 'dateOfRetirement', 'retirementReason', 'lastSalary', 'gradeLevel']
       employmentFields.forEach(key => {
         if (data[key] !== undefined) {
           doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)

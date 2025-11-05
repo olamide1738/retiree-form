@@ -1,7 +1,7 @@
 import { countries } from "../data/countries";
 import DatePickerInput from "./DatePickerInput";
 
-export default function PersonalInfoSection({ values, onChange }) {
+export default function PersonalInfoSection({ values, onChange, errors }) {
   return (
     <fieldset className="section">
       <legend>Personal Information</legend>
@@ -70,13 +70,19 @@ export default function PersonalInfoSection({ values, onChange }) {
           <input
             type="text"
             inputMode="numeric"
-            pattern="[0-9]*"
+            pattern="\\d{11}"
+            minLength={11}
+            maxLength={11}
             name="phoneNumber"
             value={values.phoneNumber}
             onChange={onChange}
             required
             className="number-input"
+            title="Enter exactly 11 digits"
           />
+          {errors?.phoneNumber && (
+            <div className="field-error">{errors.phoneNumber}</div>
+          )}
         </label>
 
         <label>
@@ -106,13 +112,19 @@ export default function PersonalInfoSection({ values, onChange }) {
           <input
             type="text"
             inputMode="numeric"
-            pattern="[0-9]*"
+            pattern="\\d{11}"
+            minLength={11}
+            maxLength={11}
             name="nextOfKinPhone"
             value={values.nextOfKinPhone}
             onChange={onChange}
             required
             className="number-input"
+            title="Enter exactly 11 digits"
           />
+          {errors?.nextOfKinPhone && (
+            <div className="field-error">{errors.nextOfKinPhone}</div>
+          )}
         </label>
       </div>
     </fieldset>

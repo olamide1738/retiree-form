@@ -20,49 +20,63 @@ export default function DatePickerInput({ name, value, onChange, required }) {
     onChange({ target: { name, value: iso } })
   }
 
+  const displayValue = (() => {
+    if (!value) return ''
+    const d = new Date(value)
+    if (isNaN(d.getTime())) return value
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  })()
+
   return (
-    <DatePicker
-      selected={parsed}
-      onChange={handleChange}
-      dateFormat="yyyy-MM-dd"
-      placeholderText="YYYY-MM-DD"
-      required={required}
-      className="react-datepicker-input"
-      showMonthDropdown
-      showYearDropdown
-      dropdownMode="select"
-      isClearable
-      // Mobile optimizations
-      withPortal={isMobile}
-      shouldCloseOnSelect={true}
-      popperClassName="react-datepicker-popper"
-      popperPlacement="bottom-center"
-      popperModifiers={[
-        {
-          name: 'preventOverflow',
-          options: {
-            boundary: 'viewport',
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <DatePicker
+        selected={parsed}
+        onChange={handleChange}
+        dateFormat="yyyy-MM-dd"
+        placeholderText="YYYY-MM-DD"
+        required={required}
+        className="react-datepicker-input"
+        showMonthDropdown
+        showYearDropdown
+        dropdownMode="select"
+        isClearable
+        // Mobile optimizations
+        withPortal={isMobile}
+        shouldCloseOnSelect={true}
+        popperClassName="react-datepicker-popper"
+        popperPlacement="bottom-center"
+        popperModifiers={[
+          {
+            name: 'preventOverflow',
+            options: {
+              boundary: 'viewport',
+            },
           },
-        },
-        {
-          name: 'flip',
-          options: {
-            fallbackPlacements: ['top-center', 'bottom-center'],
+          {
+            name: 'flip',
+            options: {
+              fallbackPlacements: ['top-center', 'bottom-center'],
+            },
           },
-        },
-        {
-          name: 'offset',
-          options: {
-            offset: [0, 10],
+          {
+            name: 'offset',
+            options: {
+              offset: [0, 10],
+            },
           },
-        },
-      ]}
-      // Additional mobile-friendly props
-      fixedHeight={isMobile}
-      inline={false}
-      autoFocus={false}
-      showPopperArrow={false}
-    />
+        ]}
+        // Additional mobile-friendly props
+        fixedHeight={isMobile}
+        inline={false}
+        autoFocus={false}
+        showPopperArrow={false}
+      />
+      {isMobile && displayValue && (
+        <div style={{ marginTop: '6px', fontSize: '0.85rem', color: 'var(--muted)' }}>
+          Selected: {displayValue}
+        </div>
+      )}
+    </div>
   )
 }
 

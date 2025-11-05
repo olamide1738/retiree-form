@@ -4,8 +4,6 @@ import PersonalInfoSection from './components/PersonalInfoSection'
 import EmploymentInfoSection from './components/EmploymentInfoSection'
 import PensionBenefitsSection from './components/PensionBenefitsSection'
 import VerificationDocumentsSection from './components/VerificationDocumentsSection'
-import DeclarationConsentSection from './components/DeclarationConsentSection'
-import DeclarationConsentSectionOnline from './components/DeclarationConsentSectionOnline'
 import OptionalQuestionsSection from './components/OptionalQuestionsSection'
 import Dashboard from './components/Dashboard'
 import LogoHeader from './components/LogoHeader'
@@ -16,7 +14,7 @@ function App() {
   const [formType, setFormType] = useState('physical')
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
-  const totalPages = 6
+  const totalPages = 5
 
   const [personalInfo, setPersonalInfo] = useState({
     fullName: '',
@@ -37,7 +35,8 @@ function App() {
     dateOfEmployment: '',
     dateOfRetirement: '',
     retirementReason: '',
-    lastSalaryOrGrade: ''
+    lastSalary: '',
+    gradeLevel: ''
   })
 
   const [pensionBenefits, setPensionBenefits] = useState({
@@ -55,22 +54,13 @@ function App() {
     otherDocuments: []
   })
 
-  const [declarationValues, setDeclarationValues] = useState({
-    confirmAccuracy: '',
-    declarationDate: '',
-    witnessName: '',
-    witnessDate: ''
-  })
-  const [declarationFiles, setDeclarationFiles] = useState({
-    declarantSignature: null,
-    witnessSignature: null
-  })
-
   const [optionalQuestions, setOptionalQuestions] = useState({
     preferredCommunication: '',
     healthStatus: '',
     additionalComments: ''
   })
+
+  const [errors, setErrors] = useState({})
 
   const [showDashboard, setShowDashboard] = useState(false)
   
@@ -115,12 +105,30 @@ function App() {
     }
   }
 
+  function setFieldError(field, message) {
+    setErrors(prev => ({ ...prev, [field]: message }))
+  }
+
+  function clearFieldError(field) {
+    setErrors(prev => {
+      if (!prev[field]) return prev
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+  }
+
   function handlePersonalChange(event) {
     const { name, value } = event.target
     
     // Validate numeric inputs
-    if ((name === 'phoneNumber' || name === 'nextOfKinPhone') && value && !/^\d*$/.test(value)) {
-      return // Don't update if non-numeric characters are entered
+    if ((name === 'phoneNumber' || name === 'nextOfKinPhone')) {
+      if (value && !/^\d*$/.test(value)) {
+        setFieldError(name, 'Digits only (0-9) are allowed')
+        return
+      }
+      clearFieldError(name)
+      if (value.length > 11) return
     }
     
     setPersonalInfo(prev => ({ ...prev, [name]: value }))
@@ -129,9 +137,13 @@ function App() {
   function handleEmploymentChange(event) {
     const { name, value } = event.target
     
-    // Validate numeric inputs
-    if (name === 'lastSalaryOrGrade' && value && !/^\d*$/.test(value)) {
-      return // Don't update if non-numeric characters are entered
+    // Grade level should be numeric digits only
+    if (name === 'gradeLevel') {
+      if (value && !/^\d*$/.test(value)) {
+        setFieldError(name, 'Grade level must contain digits only')
+        return
+      }
+      clearFieldError(name)
     }
     
     setEmploymentInfo(prev => ({ ...prev, [name]: value }))
@@ -141,8 +153,13 @@ function App() {
     const { name, value } = event.target
     
     // Validate numeric inputs
-    if ((name === 'pensionNumber' || name === 'accountNumber') && value && !/^\d*$/.test(value)) {
-      return // Don't update if non-numeric characters are entered
+    if (name === 'pensionNumber' || name === 'accountNumber') {
+      if (value && !/^\d*$/.test(value)) {
+        setFieldError(name, 'Digits only (0-9) are allowed')
+        return
+      }
+      clearFieldError(name)
+      if (name === 'accountNumber' && value.length > 10) return
     }
     
     setPensionBenefits(prev => ({ ...prev, [name]: value }))
@@ -162,19 +179,18 @@ function App() {
     }
   }
 
-  function handleDeclarationChange(event) {
-    const { name, value } = event.target
-    setDeclarationValues(prev => ({ ...prev, [name]: value }))
-  }
-
-  function handleDeclarationFileChange(event) {
-    const { name, files } = event.target
-    setDeclarationFiles(prev => ({ ...prev, [name]: files && files[0] ? files[0] : null }))
-  }
-
   function handleOptionalChange(event) {
     const { name, value } = event.target
     setOptionalQuestions(prev => ({ ...prev, [name]: value }))
+  }
+
+  function handleFieldBlur(event) {
+    const el = event.target
+    if (!el) return
+    const tag = el.tagName
+    if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') {
+      el.classList.add('dirty')
+    }
   }
 
   async function handleSubmit(event) {
@@ -187,7 +203,6 @@ function App() {
       ...employmentInfo,
       ...pensionBenefits,
       ...verificationDocs,
-      ...declarationValues,
       ...optionalQuestions,
       formType
     }
@@ -202,8 +217,6 @@ function App() {
     if (verificationFiles.birthCertOrId) formData.append('birthCertOrId', verificationFiles.birthCertOrId)
     if (verificationFiles.passportPhoto) formData.append('passportPhoto', verificationFiles.passportPhoto)
     verificationFiles.otherDocuments.forEach(file => formData.append('otherDocuments', file))
-    if (declarationFiles.declarantSignature) formData.append('declarantSignature', declarationFiles.declarantSignature)
-    if (declarationFiles.witnessSignature) formData.append('witnessSignature', declarationFiles.witnessSignature)
 
     try {
       const res = await fetch('/api/upload', {
@@ -233,7 +246,8 @@ function App() {
         dateOfEmployment: '',
         dateOfRetirement: '',
         retirementReason: '',
-        lastSalaryOrGrade: ''
+        lastSalary: '',
+        gradeLevel: ''
       })
       setPensionBenefits({
         pensionNumber: '',
@@ -248,21 +262,19 @@ function App() {
         passportPhoto: null,
         otherDocuments: []
       })
-      setDeclarationValues({
-        confirmAccuracy: '',
-        declarationDate: '',
-        witnessName: '',
-        witnessDate: ''
-      })
-      setDeclarationFiles({ declarantSignature: null, witnessSignature: null })
       setOptionalQuestions({
         preferredCommunication: '',
         healthStatus: '',
         additionalComments: ''
       })
+      setErrors({})
       // Clear native file inputs in the DOM
       if (event.target && typeof event.target.reset === 'function') {
         event.target.reset()
+      }
+      // For physical registration, return to the beginning for next user
+      if (formType === 'physical') {
+        setCurrentPage(1)
       }
     } catch (e) {
       console.error(e)
@@ -309,28 +321,28 @@ function App() {
         <Dashboard />
       ) : (
         <div>
-          <form onSubmit={handleSubmit} className="form">
+          <form onSubmit={handleSubmit} onBlur={handleFieldBlur} className="form">
             {/* Hidden field to track form type */}
             <input type="hidden" name="formType" value={formType} />
 
             {/* Page 1: Personal Information */}
             {currentPage === 1 && (
               <div className="form-section">
-                <PersonalInfoSection values={personalInfo} onChange={handlePersonalChange} />
+                <PersonalInfoSection values={personalInfo} onChange={handlePersonalChange} errors={errors} />
               </div>
             )}
 
             {/* Page 2: Employment Information */}
             {currentPage === 2 && (
               <div className="form-section">
-                <EmploymentInfoSection values={employmentInfo} onChange={handleEmploymentChange} />
+                <EmploymentInfoSection values={employmentInfo} onChange={handleEmploymentChange} errors={errors} />
               </div>
             )}
 
             {/* Page 3: Pension Benefits */}
             {currentPage === 3 && (
               <div className="form-section">
-                <PensionBenefitsSection values={pensionBenefits} onChange={handlePensionChange} />
+                <PensionBenefitsSection values={pensionBenefits} onChange={handlePensionChange} errors={errors} />
               </div>
             )}
 
@@ -345,27 +357,8 @@ function App() {
               </div>
             )}
 
-            {/* Page 5: Declaration/Consent */}
+            {/* Page 5: Optional Questions */}
             {currentPage === 5 && (
-              <div className="form-section">
-                {formType === 'physical' ? (
-                  <DeclarationConsentSection
-                    values={declarationValues}
-                    onChange={handleDeclarationChange}
-                    onFileChange={handleDeclarationFileChange}
-                  />
-                ) : (
-                  <DeclarationConsentSectionOnline
-                    values={declarationValues}
-                    onChange={handleDeclarationChange}
-                    onFileChange={handleDeclarationFileChange}
-                  />
-                )}
-              </div>
-            )}
-
-            {/* Page 6: Optional Questions */}
-            {currentPage === 6 && (
               <div className="form-section">
                 <OptionalQuestionsSection values={optionalQuestions} onChange={handleOptionalChange} />
               </div>

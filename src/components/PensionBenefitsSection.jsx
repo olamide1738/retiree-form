@@ -1,4 +1,4 @@
-export default function PensionBenefitsSection({ values, onChange }) {
+export default function PensionBenefitsSection({ values, onChange, errors }) {
   return (
     <fieldset className="section">
       <legend>Pension / Benefits Information</legend>
@@ -34,13 +34,19 @@ export default function PensionBenefitsSection({ values, onChange }) {
           <input
             type="text"
             inputMode="numeric"
-            pattern="[0-9]*"
+            pattern="\\d{10}"
+            minLength={10}
+            maxLength={10}
             name="accountNumber"
             value={values.accountNumber}
             onChange={onChange}
             required
             className="number-input"
+            title="Enter exactly 10 digits"
           />
+          {errors?.accountNumber && (
+            <div className="field-error">{errors.accountNumber}</div>
+          )}
         </label>
 
         <label>

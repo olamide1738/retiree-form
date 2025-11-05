@@ -1,6 +1,5 @@
 import DatePickerInput from "./DatePickerInput";
 import FileInput from "./FileInput";
-import SignatureInput from "./SignatureInput";
 
 export default function DeclarationConsentSectionOnline({ values, onChange, onFileChange }) {
   return (
@@ -23,9 +22,10 @@ export default function DeclarationConsentSectionOnline({ values, onChange, onFi
         </label>
 
         <label className="full">
-          <span>Your Signature (You can draw your signature here or upload a file)</span>
-          <SignatureInput
+          <span>Your Signature (upload an image)</span>
+          <FileInput
             name="declarantSignature"
+            accept="image/*"
             onChange={onFileChange}
             required
           />

@@ -1,6 +1,6 @@
 import DatePickerInput from "./DatePickerInput";
 
-export default function EmploymentInfoSection({ values, onChange }) {
+export default function EmploymentInfoSection({ values, onChange, errors }) {
   return (
     <fieldset className="section">
       <legend>Employment Information</legend>
@@ -65,17 +65,32 @@ export default function EmploymentInfoSection({ values, onChange }) {
         </label>
 
         <label>
-          <span>Last Salary / Grade Level</span>
+          <span>Last Salary</span>
+          <input
+            type="text"
+            name="lastSalary"
+            value={values.lastSalary}
+            onChange={onChange}
+            required
+          />
+        </label>
+
+        <label>
+          <span>Grade Level</span>
           <input
             type="text"
             inputMode="numeric"
             pattern="[0-9]*"
-            name="lastSalaryOrGrade"
-            value={values.lastSalaryOrGrade}
+            name="gradeLevel"
+            value={values.gradeLevel}
             onChange={onChange}
             required
             className="number-input"
+            title="Enter digits only"
           />
+          {errors?.gradeLevel && (
+            <div className="field-error">{errors.gradeLevel}</div>
+          )}
         </label>
       </div>
     </fieldset>

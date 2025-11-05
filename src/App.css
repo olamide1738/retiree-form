@@ -1553,3 +1553,26 @@ input[type="file"]::-webkit-file-upload-button:active {
     height: 6px;
   }
 }
+
+/* Highlight invalid required fields after user interaction */
+input.dirty:invalid,
+select.dirty:invalid,
+textarea.dirty:invalid,
+.react-datepicker-input.dirty:invalid {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12) !important;
+}
+
+/* Optional subtle animation when becoming invalid */
+input.dirty:invalid,
+select.dirty:invalid,
+textarea.dirty:invalid {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Inline field error message */
+.field-error {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-top: -0.25rem;
+}
