@@ -179,6 +179,26 @@ app.delete('/api/submissions/:id', async (req, res) => {
   }
 })
 
+// Update a specific submission's data_json
+app.put('/api/submissions/:id', async (req, res) => {
+  try {
+    const submissionId = req.params.id
+    const body = req.body || {}
+    // Replace data_json with the provided object
+    const result = await pool.query(
+      'UPDATE submissions SET data_json = $1 WHERE id = $2',
+      [JSON.stringify(body), submissionId]
+    )
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Submission not found' })
+    }
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error updating submission:', error)
+    res.status(500).json({ error: 'Failed to update submission' })
+  }
+})
+
 // Clear all submissions and their files
 app.delete('/api/submissions', async (req, res) => {
   try {

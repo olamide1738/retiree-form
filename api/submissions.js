@@ -81,7 +81,25 @@ export default async function handler(req, res) {
       const submissionId = result.rows[0].id
       res.status(201).json({ id: submissionId })
       
-    } else if (req.method === 'DELETE') {
+  } else if (req.method === 'PUT') {
+    const url = new URL(req.url, `http://${req.headers.host}`)
+    const submissionId = url.pathname.split('/').pop()
+    const body = req.body || {}
+    try {
+      const result = await client.query(
+        'UPDATE submissions SET data_json = $1 WHERE id = $2',
+        [JSON.stringify(body), submissionId]
+      )
+      if (result.rowCount === 0) {
+        res.status(404).json({ error: 'Submission not found' })
+      } else {
+        res.status(200).json({ success: true })
+      }
+    } catch (e) {
+      console.error('Update error:', e)
+      res.status(500).json({ error: 'Failed to update submission' })
+    }
+  } else if (req.method === 'DELETE') {
       const url = new URL(req.url, `http://${req.headers.host}`)
       const pathname = url.pathname
       

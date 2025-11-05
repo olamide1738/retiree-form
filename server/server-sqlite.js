@@ -119,6 +119,21 @@ app.delete('/api/submissions/:id', (req, res) => {
   })
 })
 
+// Update a specific submission's data_json (SQLite)
+app.put('/api/submissions/:id', (req, res) => {
+  const submissionId = req.params.id
+  const body = req.body || {}
+  db.run(
+    `UPDATE submissions SET data_json = ? WHERE id = ?`,
+    [JSON.stringify(body), submissionId],
+    function (err) {
+      if (err) return res.status(500).json({ error: 'DB update failed' })
+      if (this.changes === 0) return res.status(404).json({ error: 'Submission not found' })
+      res.json({ success: true })
+    }
+  )
+})
+
 // Clear all submissions and their files
 app.delete('/api/submissions', (req, res) => {
   // Get all files to delete them from disk

@@ -33,6 +33,42 @@ export default function Dashboard() {
     setModal(prev => ({ ...prev, isOpen: false }))
   }
 
+  // Edit state
+  const [editingId, setEditingId] = useState(null)
+  const [editValues, setEditValues] = useState({})
+
+  const startEdit = (row) => {
+    setEditingId(row.id)
+    setEditValues({ ...(row.data || {}) })
+  }
+
+  const cancelEdit = () => {
+    setEditingId(null)
+    setEditValues({})
+  }
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target
+    setEditValues(prev => ({ ...prev, [name]: value }))
+  }
+
+  const saveEdit = async () => {
+    if (editingId == null) return
+    try {
+      const res = await fetch(`/api/submissions/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editValues)
+      })
+      if (!res.ok) throw new Error('Failed to update submission')
+      await loadSubmissions()
+      showModal('success', 'Submission Updated', 'The submission has been successfully updated.')
+      cancelEdit()
+    } catch (e) {
+      showModal('error', 'Update Failed', 'Error updating submission: ' + e.message)
+    }
+  }
+
   const loadSubmissions = async () => {
     try {
       const res = await fetch('/api/submissions')
@@ -407,6 +443,24 @@ export default function Dashboard() {
                   Submission #{r.id}
                 </h3>
                 <button 
+                  onClick={() => startEdit(r)}
+                  style={{
+                    backgroundColor: '#0ea5e9',
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 10px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    minWidth: '60px',
+                    marginRight: '8px'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#0284c7'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#0ea5e9'}
+                >
+                  Edit
+                </button>
+                <button 
                   onClick={() => deleteSubmission(r.id)}
                   style={{
                     backgroundColor: '#dc2626',
@@ -603,6 +657,33 @@ export default function Dashboard() {
         message={modal.message}
         duration={5000}
       />
+
+      {editingId != null && (
+        <div className="modal-backdrop">
+          <div className="modal-container">
+            <div className="modal-content" style={{ textAlign: 'left' }}>
+              <h3 className="modal-title">Edit Submission #{editingId}</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', maxHeight: '60vh', overflowY: 'auto' }}>
+                {Object.entries(editValues).map(([key, val]) => (
+                  <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <span style={{ fontWeight: 600 }}>{key}</span>
+                    <input
+                      type="text"
+                      name={key}
+                      value={val ?? ''}
+                      onChange={handleEditChange}
+                    />
+                  </label>
+                ))}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+                <button onClick={cancelEdit} className="button secondary">Cancel</button>
+                <button onClick={saveEdit} className="button">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
