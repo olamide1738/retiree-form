@@ -79,31 +79,31 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }))
 // List submissions with files metadata
 app.get('/api/submissions', async (_req, res) => {
   try {
-    const [submissions] = await pool.query(`
-      SELECT s.id, s.created_at, s.data_json,
-             COALESCE(
-               (SELECT JSON_ARRAYAGG(
-                 JSON_OBJECT(
-                   'id', f.id,
-                   'field', f.field_name,
-                   'original', f.original_name,
-                   'path', f.stored_path
-                 )
-               )
-               FROM files f WHERE f.submission_id = s.id),
-               JSON_ARRAY()
-             ) AS files
-      FROM submissions s 
-      ORDER BY s.id DESC
-    `)
-    
-    const result = submissions.map(r => ({
+    const submissionsResult = await pool.query(
+      'SELECT id, created_at, data_json FROM submissions ORDER BY id DESC'
+    )
+    const filesResult = await pool.query(
+      'SELECT id, submission_id, field_name, original_name, stored_path FROM files'
+    )
+
+    const filesBySubmission = {}
+    filesResult.rows.forEach(f => {
+      if (!filesBySubmission[f.submission_id]) filesBySubmission[f.submission_id] = []
+      filesBySubmission[f.submission_id].push({
+        id: f.id,
+        field: f.field_name,
+        original: f.original_name,
+        path: f.stored_path,
+      })
+    })
+
+    const result = submissionsResult.rows.map(r => ({
       id: r.id,
       createdAt: r.created_at,
       data: JSON.parse(r.data_json || '{}'),
-      files: r.files ? JSON.parse(r.files) : []
+      files: filesBySubmission[r.id] || [],
     }))
-    
+
     res.json(result)
   } catch (error) {
     console.error('Error fetching submissions:', error)
