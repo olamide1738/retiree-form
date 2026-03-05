@@ -5,7 +5,7 @@ import multer from 'multer'
 // Create a new client for each request (no pooling)
 const createClient = () => {
   return new Client({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres.kkuwgmttbekyxsvpmrrw:Midebobo123%@aws-1-eu-west-2.pooler.supabase.com:5432/postgres',
+    connectionString: process.env.DATABASE_URL,
     ssl: {
       rejectUnauthorized: false
     }
@@ -14,7 +14,7 @@ const createClient = () => {
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage()
-const upload = multer({ 
+const upload = multer({
   storage,
   limits: {
     fileSize: 10 * 1024 * 1024 // 10MB limit
@@ -51,19 +51,19 @@ export default async function handler(req, res) {
     { name: 'declarantSignature', maxCount: 1 },
     { name: 'witnessSignature', maxCount: 1 },
   ]
-  
+
   upload.fields(fileFields)(req, res, async (err) => {
     if (err) {
       console.error('Upload error:', err)
       return res.status(400).json({ error: 'File upload failed', details: err.message })
     }
-    
+
     const client = createClient()
-    
+
     try {
       await client.connect()
       console.log('Direct connection established for upload')
-      
+
       const body = req.body || {}
       const createdAt = new Date().toISOString()
 
@@ -72,13 +72,13 @@ export default async function handler(req, res) {
         'INSERT INTO submissions (created_at, data_json) VALUES ($1, $2) RETURNING id',
         [createdAt, JSON.stringify(body)]
       )
-      
+
       const submissionId = result.rows[0].id
 
       // Handle file uploads
       const files = req.files || {}
       const fileInserts = []
-      
+
       Object.keys(files).forEach((field) => {
         files[field].forEach((f) => {
           // Store file as base64 in database for Vercel compatibility
@@ -88,11 +88,11 @@ export default async function handler(req, res) {
       })
 
       if (fileInserts.length > 0) {
-        const placeholders = fileInserts.map((_, i) => 
+        const placeholders = fileInserts.map((_, i) =>
           `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`
         ).join(',')
         const flat = fileInserts.flat()
-        
+
         await client.query(
           `INSERT INTO files (submission_id, field_name, original_name, stored_path) VALUES ${placeholders}`,
           flat
