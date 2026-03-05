@@ -1,27 +1,48 @@
-// Test Supabase connection
-import pkg from 'pg'
+import pkg from 'pg';
+const { Client } = pkg;
 
-const { Pool } = pkg
+const connectionString = process.env.DATABASE_URL;
 
-const pool = new Pool({
-  connectionString: 'postgresql://postgres:Midebobo123%23@db.kkuwgmttbekyxsvpmrrw.supabase.co:5432/postgres',
-  ssl: { rejectUnauthorized: false }
-})
+if (!connectionString) {
+  console.error('❌ ERROR: No DATABASE_URL provided. Please set it as an environment variable.');
+  process.exit(1);
+}
+
+console.log(`Testing connection to: ${connectionString.split('@')[1] || 'Unknown Host'}`);
+
+const client = new Client({
+  connectionString,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 async function testConnection() {
   try {
-    const client = await pool.connect()
-    console.log('✅ Connected to Supabase successfully!')
-    
-    // Test a simple query
-    const result = await client.query('SELECT NOW()')
-    console.log('✅ Query successful:', result.rows[0])
-    
-    client.release()
-    await pool.end()
+    await client.connect();
+    console.log('✅ Connection to database established successfully!');
+
+    // Check if tables exist
+    const result = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name IN ('submissions', 'files');
+    `);
+
+    const tables = result.rows.map(r => r.table_name);
+    console.log(`Found tables: ${tables.join(', ') || 'None'}`);
+
+    if (!tables.includes('submissions') || !tables.includes('files')) {
+      console.log('❌ ERROR: Missing required tables! You need to run the CREATE TABLE commands.');
+    } else {
+      console.log('✅ Database schema looks correct.');
+    }
   } catch (error) {
-    console.error('❌ Connection failed:', error.message)
+    console.error('❌ CONNECTION ERROR:', error.message);
+  } finally {
+    await client.end();
   }
 }
 
-testConnection()
+testConnection();
