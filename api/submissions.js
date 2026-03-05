@@ -82,8 +82,7 @@ export default async function handler(req, res) {
       res.status(201).json({ id: submissionId })
 
     } else if (req.method === 'DELETE') {
-      const url = new URL(req.url, `http://${req.headers.host}`)
-      const pathname = url.pathname
+      const pathname = req.url || '';
 
       if (pathname.includes('/submissions/') && pathname.split('/').length > 3) {
         // Delete specific submission
