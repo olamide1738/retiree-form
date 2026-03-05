@@ -61,7 +61,8 @@ function App() {
   const [errors, setErrors] = useState({})
 
   const [showDashboard, setShowDashboard] = useState(false)
-  
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
   // Modal state
   const [modal, setModal] = useState({
     isOpen: false,
@@ -195,7 +196,7 @@ function App() {
 
   function handlePersonalChange(event) {
     const { name, value } = event.target
-    
+
     // Validate numeric inputs
     if ((name === 'phoneNumber' || name === 'nextOfKinPhone')) {
       if (value && !/^\d*$/.test(value)) {
@@ -205,13 +206,13 @@ function App() {
       clearFieldError(name)
       if (value.length > 11) return
     }
-    
+
     setPersonalInfo(prev => ({ ...prev, [name]: value }))
   }
 
   function handleEmploymentChange(event) {
     const { name, value } = event.target
-    
+
     // Grade level should be numeric digits only
     if (name === 'gradeLevel') {
       if (value && !/^\d*$/.test(value)) {
@@ -220,13 +221,13 @@ function App() {
       }
       clearFieldError(name)
     }
-    
+
     setEmploymentInfo(prev => ({ ...prev, [name]: value }))
   }
 
   function handlePensionChange(event) {
     const { name, value } = event.target
-    
+
     // Pension number: alphanumeric only
     if (name === 'pensionNumber') {
       if (value && !/^[A-Za-z0-9]*$/.test(value)) {
@@ -235,7 +236,7 @@ function App() {
       }
       clearFieldError(name)
     }
-    
+
     setPensionBenefits(prev => ({ ...prev, [name]: value }))
   }
 
@@ -265,6 +266,9 @@ function App() {
 
   async function handleSubmit(event) {
     event.preventDefault()
+    if (isSubmitting) return;
+    setIsSubmitting(true)
+
     const formData = new FormData()
 
     // Append text fields
@@ -357,6 +361,8 @@ function App() {
     } catch (e) {
       console.error(e)
       showModal('error', 'Submission Failed', 'There was an error submitting your form. Please try again or contact support if the problem persists.')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -367,11 +373,11 @@ function App() {
       <div className="actions" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'center' }}>
         <button type="button" onClick={() => setShowDashboard(false)} className="nav-button" title="Form">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14,2 14,8 20,8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10,9 9,9 8,9"/>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14,2 14,8 20,8" />
+            <line x1="16" y1="13" x2="8" y2="13" />
+            <line x1="16" y1="17" x2="8" y2="17" />
+            <polyline points="10,9 9,9 8,9" />
           </svg>
         </button>
         {/* Form type dropdown */}
@@ -387,10 +393,10 @@ function App() {
         </div>
         <button type="button" onClick={() => setShowDashboard(true)} className="nav-button" title="Dashboard">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
           </svg>
         </button>
       </div>
@@ -476,14 +482,14 @@ function App() {
               </button>
 
               {/* Pagination Dots */}
-              <div className="page-dots" style={{ 
-                display: 'flex', 
+              <div className="page-dots" style={{
+                display: 'flex',
                 gap: '0.5rem',
                 alignItems: 'center',
                 backgroundColor: '#f3f4f6',
                 padding: '0.5rem 1rem',
                 borderRadius: '20px',
-               
+
               }}>
                 {Array.from({ length: totalPages }, (_, i) => (
                   <button
@@ -499,7 +505,7 @@ function App() {
                       transition: 'all 0.3s ease',
                       padding: "0px"
                     }}
-                    
+
                   />
                 ))}
               </div>
@@ -508,22 +514,32 @@ function App() {
               {currentPage === totalPages ? (
                 <button
                   type="submit"
+                  disabled={isSubmitting}
                   style={{
-                    width: '40px',
+                    width: isSubmitting ? 'auto' : '40px',
                     height: '40px',
-                    borderRadius: '50%',
+                    borderRadius: isSubmitting ? '20px' : '50%',
+                    padding: isSubmitting ? '0 1rem' : '0',
                     border: 'none',
-                    backgroundColor: '#f3f4f6',
-                    color: '#374151',
-                    cursor: 'pointer',
+                    backgroundColor: isSubmitting ? '#e5e7eb' : '#f3f4f6',
+                    color: isSubmitting ? '#9ca3af' : '#374151',
+                    cursor: isSubmitting ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    gap: isSubmitting ? '0.5rem' : '0',
                     fontSize: '16px',
                     transition: 'all 0.3s ease'
                   }}
                 >
-                  ✓
+                  {isSubmitting ? (
+                    <>
+                      <div style={{ width: '16px', height: '16px', border: '3px solid rgba(0,0,0,0.1)', borderTopColor: '#9ca3af', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                      <span style={{ fontSize: '14px', fontWeight: '500' }}>Submitting...</span>
+                    </>
+                  ) : (
+                    '✓'
+                  )}
                 </button>
               ) : (
                 <button
@@ -551,7 +567,7 @@ function App() {
           </form>
         </div>
       )}
-      
+
       {/* Modal */}
       <Modal
         isOpen={modal.isOpen}
