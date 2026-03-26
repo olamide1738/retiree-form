@@ -384,7 +384,7 @@ app.get('/api/submissions/export', async (_req, res) => {
       ['Email Address', 'emailAddress'],
       ['Next of Kin Name', 'nextOfKinName'],
       ['Next of Kin Phone', 'nextOfKinPhone'],
-      ['Relationship with Next of Kin', 'nextOfKinRelationship'],
+      ['Next of Kin Relationship', 'nextOfKinRelationship'],
       ['Organization', 'organization'],
       ['Job Title', 'jobTitle'],
       ['Department', 'department'],
@@ -394,10 +394,6 @@ app.get('/api/submissions/export', async (_req, res) => {
       ['Grade Level', 'gradeLevel'],
       ['Pension Number', 'pensionNumber'],
       ['Pension Fund Administrator', 'pensionFundAdministrator'],
-      ['Confirm Accuracy', 'confirmAccuracy'],
-      ['Declaration Date', 'declarationDate'],
-      ['Witness Name', 'witnessName'],
-      ['Witness Date', 'witnessDate'],
       ['PMO Officer', 'pmoOfficer'],
       ['Preferred Communication', 'preferredCommunication'],
       ['Health Status', 'healthStatus'],
@@ -408,9 +404,7 @@ app.get('/api/submissions/export', async (_req, res) => {
       ['Retirement Letter (file)', 'retirementLetter'],
       ['Birth Cert / ID (file)', 'birthCertOrId'],
       ['Passport Photo (file)', 'passportPhoto'],
-      ['Other Documents (files)', 'otherDocuments'],
-      ['Declarant Signature (file)', 'declarantSignature'],
-      ['Witness Signature (file)', 'witnessSignature']
+      ['Other Documents (files)', 'otherDocuments']
     ]
 
     const allHeaders = [...headers, ...fileHeaders]
@@ -421,7 +415,10 @@ app.get('/api/submissions/export', async (_req, res) => {
     }))
 
     submissions.forEach((row) => {
-      const data = JSON.parse(row.data_json || '{}')
+      let data = row.data_json || {}
+      while (typeof data === 'string') {
+        try { data = JSON.parse(data) } catch (e) { break }
+      }
       const record = { id: row.id, created_at: row.created_at }
       headers.slice(2).forEach(([, key]) => {
         record[key] = data[key] || ''
@@ -539,7 +536,10 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
     doc.moveDown(2)
 
     submissions.forEach((row, index) => {
-      const data = JSON.parse(row.data_json || '{}')
+      let data = row.data_json || {}
+      while (typeof data === 'string') {
+        try { data = JSON.parse(data) } catch (e) { break }
+      }
 
       // Submission header
       doc.fontSize(14).text(`SUBMISSION #${row.id}`, { underline: true })
@@ -577,7 +577,7 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
       // Pension/Benefits Information Section
       doc.fontSize(12).text('PENSION/BENEFITS INFORMATION', { underline: true })
       doc.moveDown(0.5)
-      const pensionFields = ['pensionNumber', 'bankName', 'accountNumber', 'pensionPaymentMode']
+      const pensionFields = ['pensionNumber', 'pensionFundAdministrator']
       pensionFields.forEach(key => {
         if (data[key] !== undefined) {
           doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
@@ -596,16 +596,6 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
       })
       doc.moveDown(1)
 
-      // Declaration/Consent Section
-      doc.fontSize(12).text('DECLARATION/CONSENT', { underline: true })
-      doc.moveDown(0.5)
-      const declarationFields = ['confirmAccuracy', 'declarationDate', 'witnessName', 'witnessDate']
-      declarationFields.forEach(key => {
-        if (data[key] !== undefined) {
-          doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
-        }
-      })
-      doc.moveDown(1)
 
       // Files Section
       const submissionFiles = filesBySubmission[row.id] || []
@@ -613,14 +603,11 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
         doc.fontSize(12).text('UPLOADED DOCUMENTS', { underline: true })
         doc.moveDown(0.5)
 
-        // Define all possible file fields with their proper labels
         const fileFieldLabels = {
           retirementLetter: 'Copy of Retirement Letter / Service Certificate',
           birthCertOrId: 'Birth Certificate / National ID',
           passportPhoto: 'Passport Photograph',
-          otherDocuments: 'Other Relevant Documents',
-          declarantSignature: 'Declarant Signature',
-          witnessSignature: 'Witness / HR Officer Signature'
+          otherDocuments: 'Other Relevant Documents'
         }
 
         // Group files by field name

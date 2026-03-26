@@ -30,12 +30,12 @@ export default async function handler(req, res) {
 
   try {
     await initDB()
-    
+
     const submissionsResult = await pool.query('SELECT * FROM submissions ORDER BY id DESC')
     const filesResult = await pool.query('SELECT * FROM files')
     const submissions = submissionsResult.rows
     const files = filesResult.rows
-    
+
     const filesBySubmission = {}
     files.forEach(f => {
       if (!filesBySubmission[f.submission_id]) filesBySubmission[f.submission_id] = []
@@ -45,8 +45,8 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'application/pdf')
     res.setHeader('Content-Disposition', 'attachment; filename="submissions.pdf"')
 
-    const doc = new PDFDocument({ 
-      margin: 50, 
+    const doc = new PDFDocument({
+      margin: 50,
       size: 'A4',
       info: {
         Title: 'Retiree Verification Form - Submissions Report',
@@ -61,15 +61,15 @@ export default async function handler(req, res) {
     doc.rect(50, 50, 495, 80)
       .fillColor('#B8860B')
       .fill()
-    
+
     doc.fillColor('white')
       .fontSize(24)
       .font('Helvetica-Bold')
       .text('LAGOS STATE GOVERNMENT', 60, 70, { align: 'center', width: 475 })
-    
+
     doc.fontSize(16)
       .text('Retiree Verification Form - Submissions Report', 60, 100, { align: 'center', width: 475 })
-    
+
     doc.fillColor('black')
     doc.moveDown(3)
 
@@ -77,30 +77,33 @@ export default async function handler(req, res) {
     doc.fontSize(14)
       .font('Helvetica-Bold')
       .text(`Total Submissions: ${submissions.length}`, { align: 'center' })
-    
+
     doc.fontSize(10)
       .font('Helvetica')
       .text(`Generated on: ${new Date().toLocaleDateString('en-GB')} at ${new Date().toLocaleTimeString('en-GB')}`, { align: 'center' })
-    
+
     doc.moveDown(2)
 
     submissions.forEach((row, index) => {
-      const data = JSON.parse(row.data_json || '{}')
-      
+      let data = row.data_json || {}
+      while (typeof data === 'string') {
+        try { data = JSON.parse(data) } catch (e) { break }
+      }
+
       // Submission header
       doc.rect(50, doc.y, 495, 25)
         .fillColor('#F5F5F5')
         .fill()
-      
+
       doc.fillColor('black')
         .fontSize(12)
         .font('Helvetica-Bold')
         .text(`Submission #${row.id}`, 60, doc.y - 20)
-      
+
       doc.fontSize(10)
         .font('Helvetica')
         .text(`Submitted: ${new Date(row.created_at).toLocaleDateString('en-GB')} at ${new Date(row.created_at).toLocaleTimeString('en-GB')}`, 200, doc.y - 20)
-      
+
       doc.moveDown(1.5)
 
       // Helper function to create a section box
@@ -109,34 +112,34 @@ export default async function handler(req, res) {
         doc.rect(x, y, width, 20)
           .fillColor('#B8860B')
           .fill()
-        
+
         doc.fillColor('white')
           .fontSize(10)
           .font('Helvetica-Bold')
           .text(title, x + 5, y + 5)
-        
+
         // Section content
         doc.fillColor('black')
         doc.fontSize(8)
         doc.font('Helvetica')
-        
+
         let currentY = y + 25
         fields.forEach(field => {
           if (data[field.key] && currentY < y + height - 10) {
             const label = field.label + ':'
             const value = String(data[field.key])
-            
+
             // Truncate long values
             const maxValueLength = 20
-            const truncatedValue = value.length > maxValueLength ? 
+            const truncatedValue = value.length > maxValueLength ?
               value.substring(0, maxValueLength) + '...' : value
-            
+
             doc.text(`${label}`, x + 5, currentY)
             doc.text(truncatedValue, x + 70, currentY)
             currentY += 12
           }
         })
-        
+
         return y + height + 10 // Return next Y position
       }
 
@@ -161,13 +164,10 @@ export default async function handler(req, res) {
         currentY = createSection('PERSONAL INFO', personalFields, leftColumnX, currentY, columnWidth, sectionHeight)
       }
 
-      if (data.pensionNumber || data.bankName || data.accountNumber) {
+      if (data.pensionNumber || data.pensionFundAdministrator) {
         const pensionFields = [
           { key: 'pensionNumber', label: 'Pension No' },
-          { key: 'bankName', label: 'Bank' },
-          { key: 'accountNumber', label: 'Account No' },
-          { key: 'pensionPaymentMode', label: 'Payment Mode' },
-          { key: 'bvn', label: 'BVN' }
+          { key: 'pensionFundAdministrator', label: 'PFA' }
         ]
         createSection('PENSION INFO', pensionFields, rightColumnX, currentY - sectionHeight - 10, columnWidth, sectionHeight)
       }
@@ -181,15 +181,16 @@ export default async function handler(req, res) {
           { key: 'dateOfEmployment', label: 'Start Date' },
           { key: 'dateOfRetirement', label: 'End Date' },
           { key: 'retirementReason', label: 'Reason' },
-          { key: 'lastSalaryOrGrade', label: 'Last Salary' }
+          { key: 'gradeLevel', label: 'Grade Level' }
         ]
         currentY = createSection('EMPLOYMENT', employmentFields, leftColumnX, currentY, columnWidth, sectionHeight)
       }
 
-      if (data.nextOfKinName || data.nextOfKinPhone) {
+      if (data.nextOfKinName || data.nextOfKinPhone || data.nextOfKinRelationship) {
         const nextOfKinFields = [
           { key: 'nextOfKinName', label: 'Name' },
-          { key: 'nextOfKinPhone', label: 'Phone' }
+          { key: 'nextOfKinPhone', label: 'Phone' },
+          { key: 'nextOfKinRelationship', label: 'Relationship' }
         ]
         createSection('NEXT OF KIN', nextOfKinFields, rightColumnX, currentY - sectionHeight - 10, columnWidth, sectionHeight)
       }
@@ -202,16 +203,16 @@ export default async function handler(req, res) {
         doc.rect(leftColumnX, documentsY, columnWidth, sectionHeight)
           .fillColor('#B8860B')
           .fill()
-        
+
         doc.fillColor('white')
           .fontSize(10)
           .font('Helvetica-Bold')
           .text('ATTACHED DOCUMENTS', leftColumnX + 5, documentsY + 5)
-        
+
         doc.fillColor('black')
         doc.fontSize(8)
         doc.font('Helvetica')
-        
+
         let docY = documentsY + 25
         submissionFiles.forEach((f, fileIndex) => {
           if (docY < documentsY + sectionHeight - 10) {
@@ -236,33 +237,34 @@ export default async function handler(req, res) {
         doc.rect(rightColumnX, additionalY, columnWidth, sectionHeight)
           .fillColor('#B8860B')
           .fill()
-        
+
         doc.fillColor('white')
           .fontSize(10)
           .font('Helvetica-Bold')
           .text('ADDITIONAL INFO', rightColumnX + 5, additionalY + 5)
-        
+
         doc.fillColor('black')
         doc.fontSize(8)
         doc.font('Helvetica')
-        
+
         let infoY = additionalY + 25
         const additionalFields = [
+          { key: 'pmoOfficer', label: 'PMO Officer' },
           { key: 'preferredCommunication', label: 'Preferred Communication' },
           { key: 'healthStatus', label: 'Health Status' },
           { key: 'additionalComments', label: 'Additional Comments' }
         ]
-        
+
         additionalFields.forEach(field => {
           if (data[field.key] && infoY < additionalY + sectionHeight - 10) {
             const label = field.label + ':'
             const value = String(data[field.key])
-            
+
             // Truncate long values
             const maxValueLength = 20
-            const truncatedValue = value.length > maxValueLength ? 
+            const truncatedValue = value.length > maxValueLength ?
               value.substring(0, maxValueLength) + '...' : value
-            
+
             doc.text(`${label}`, rightColumnX + 5, infoY)
             doc.text(truncatedValue, rightColumnX + 5, infoY + 12)
             infoY += 24 // More spacing between fields

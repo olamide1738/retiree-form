@@ -30,12 +30,12 @@ export default async function handler(req, res) {
 
   try {
     await initDB()
-    
+
     const submissionsResult = await pool.query('SELECT * FROM submissions ORDER BY id DESC')
     const filesResult = await pool.query('SELECT * FROM files')
     const submissions = submissionsResult.rows
     const files = filesResult.rows
-    
+
     const filesBySubmission = {}
     files.forEach(f => {
       if (!filesBySubmission[f.submission_id]) filesBySubmission[f.submission_id] = []
@@ -57,48 +57,41 @@ export default async function handler(req, res) {
       ['Email Address', 'emailAddress'],
       ['Next of Kin Name', 'nextOfKinName'],
       ['Next of Kin Phone', 'nextOfKinPhone'],
+      ['Next of Kin Relationship', 'nextOfKinRelationship'],
       ['Organization', 'organization'],
       ['Job Title', 'jobTitle'],
       ['Department', 'department'],
       ['Date of Employment', 'dateOfEmployment'],
       ['Date of Retirement', 'dateOfRetirement'],
       ['Retirement Reason', 'retirementReason'],
-      ['Last Salary / Grade', 'lastSalaryOrGrade'],
+      ['Grade Level', 'gradeLevel'],
       ['Pension Number', 'pensionNumber'],
-      ['Bank Name', 'bankName'],
-      ['Account Number', 'accountNumber'],
-      ['Payment Mode', 'pensionPaymentMode'],
-      ['BVN', 'bvn'],
-      ['Confirm Accuracy', 'confirmAccuracy'],
-      ['Declaration Date', 'declarationDate'],
-      ['Witness Name', 'witnessName'],
-      ['Witness Date', 'witnessDate'],
+      ['Pension Fund Administrator', 'pensionFundAdministrator'],
+      ['PMO Officer', 'pmoOfficer'],
       ['Preferred Communication', 'preferredCommunication'],
       ['Health Status', 'healthStatus'],
       ['Additional Comments', 'additionalComments']
     ]
-    
+
     const fileHeaders = [
       ['Retirement Letter (file)', 'retirementLetter'],
       ['Birth Cert / ID (file)', 'birthCertOrId'],
       ['Passport Photo (file)', 'passportPhoto'],
-      ['Other Documents (files)', 'otherDocuments'],
-      ['Declarant Signature (file)', 'declarantSignature'],
-      ['Witness Signature (file)', 'witnessSignature']
+      ['Other Documents (files)', 'otherDocuments']
     ]
-    
+
     const allHeaders = [...headers, ...fileHeaders]
-    sheet.columns = allHeaders.map(([header, key]) => ({ 
-      header, 
-      key, 
-      width: Math.max(18, header.length + 2) 
+    sheet.columns = allHeaders.map(([header, key]) => ({
+      header,
+      key,
+      width: Math.max(18, header.length + 2)
     }))
 
     submissions.forEach((row) => {
       const data = JSON.parse(row.data_json || '{}')
       const record = { id: row.id, created_at: row.created_at }
-      headers.slice(2).forEach(([, key]) => { 
-        record[key] = data[key] || '' 
+      headers.slice(2).forEach(([, key]) => {
+        record[key] = data[key] || ''
       })
 
       const submissionFiles = filesBySubmission[row.id] || []
@@ -107,13 +100,11 @@ export default async function handler(req, res) {
         acc[f.field_name].push(f)
         return acc
       }, {})
-      
+
       record.retirementLetter = (byField.retirementLetter?.[0]?.original_name) || ''
       record.birthCertOrId = (byField.birthCertOrId?.[0]?.original_name) || ''
       record.passportPhoto = (byField.passportPhoto?.[0]?.original_name) || ''
-      record.declarantSignature = (byField.declarantSignature?.[0]?.original_name) || ''
-      record.witnessSignature = (byField.witnessSignature?.[0]?.original_name) || ''
-      record.otherDocuments = (byField.otherDocuments ? 
+      record.otherDocuments = (byField.otherDocuments ?
         byField.otherDocuments.map(f => f.original_name).join(', ') : '')
 
       sheet.addRow(record)
