@@ -35,20 +35,16 @@ export default function Dashboard() {
 
   const [editModal, setEditModal] = useState(false)
   const [editingId, setEditingId] = useState(null)
+  const [editingDisplayId, setEditingDisplayId] = useState(null)
   const [editData, setEditData] = useState({})
+  const [sortBy, setSortBy] = useState('dateDesc')
 
   const loadSubmissions = async () => {
     try {
       const res = await fetch('/api/submissions')
       if (!res.ok) throw new Error('Failed to load submissions')
       const json = await res.json()
-      // Sort submissions alphabetically by full name
-      const sortedJson = json.sort((a, b) => {
-        const nameA = String(a.data?.fullName || '').toLowerCase()
-        const nameB = String(b.data?.fullName || '').toLowerCase()
-        return nameA.localeCompare(nameB)
-      })
-      setRows(sortedJson)
+      setRows(json)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -98,6 +94,7 @@ export default function Dashboard() {
 
   const openEditModal = (submission) => {
     setEditingId(submission.id)
+    setEditingDisplayId(submission.displayId)
     setEditData(submission.data || {})
     setEditModal(true)
   }
@@ -207,8 +204,24 @@ export default function Dashboard() {
     </div>
   )
 
+  // Compute display IDs and sorted rows
+  const chronological = [...rows].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+  const rowsWithDisplayId = chronological.map((r, index) => ({ ...r, displayId: index + 1 }))
+
+  const sortedRows = [...rowsWithDisplayId].sort((a, b) => {
+    if (sortBy === 'dateDesc') return new Date(b.createdAt) - new Date(a.createdAt)
+    if (sortBy === 'dateAsc') return new Date(a.createdAt) - new Date(b.createdAt)
+    if (sortBy === 'alphabetical') {
+      const nameA = String(a.data?.fullName || '').toLowerCase()
+      const nameB = String(b.data?.fullName || '').toLowerCase()
+      return nameA.localeCompare(nameB)
+    }
+    if (sortBy === 'id') return a.displayId - b.displayId
+    return 0
+  })
+
   const allKeys = Array.from(
-    rows.reduce((set, r) => {
+    sortedRows.reduce((set, r) => {
       Object.keys(r.data || {}).forEach(k => set.add(k))
       return set
     }, new Set(['id', 'createdAt', 'files']))
@@ -248,8 +261,28 @@ export default function Dashboard() {
           display: 'flex',
           gap: '10px',
           flexWrap: 'wrap',
-          justifyContent: 'flex-end'
+          justifyContent: 'flex-end',
+          alignItems: 'center'
         }}>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            style={{
+              padding: '8px 12px',
+              borderRadius: '6px',
+              border: '1px solid #cbd5e1',
+              fontSize: '14px',
+              backgroundColor: 'white',
+              cursor: 'pointer',
+              fontWeight: '500',
+              color: 'var(--brand-brown)'
+            }}
+          >
+            <option value="dateDesc">Newest First</option>
+            <option value="dateAsc">Oldest First</option>
+            <option value="alphabetical">Alphabetical (A-Z)</option>
+            <option value="id">By ID (Sequential)</option>
+          </select>
           <a
             href="/api/submissions/export"
             target="_blank"
@@ -424,7 +457,7 @@ export default function Dashboard() {
       {isMobile ? (
         // Mobile Card Layout
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {rows.map(r => (
+          {sortedRows.map(r => (
             <div key={r.id} style={{
               backgroundColor: 'white',
               border: '1px solid #e2e8f0',
@@ -441,7 +474,7 @@ export default function Dashboard() {
                 borderBottom: '1px solid #f1f5f9'
               }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--brand-brown)' }}>
-                  Submission #{r.id}
+                  Submission #{r.displayId}
                 </h3>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
@@ -561,14 +594,14 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {rows.map(r => (
+              {sortedRows.map(r => (
                 <tr key={r.id}>
                   {allKeys.map(k => {
                     if (k === 'id') return <td key={k} style={{
                       borderBottom: '1px solid #f1f5f9',
                       padding: '8px',
                       fontSize: '0.85rem'
-                    }}>{r.id}</td>
+                    }}>{r.displayId}</td>
                     if (k === 'createdAt') {
                       const dateOnly = (() => {
                         const d = new Date(r.createdAt)
@@ -676,7 +709,7 @@ export default function Dashboard() {
       {editModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.15)' }}>
-            <h3 style={{ marginTop: 0, marginBottom: '20px', color: 'var(--brand-brown)' }}>Edit Submission #{editingId}</h3>
+            <h3 style={{ marginTop: 0, marginBottom: '20px', color: 'var(--brand-brown)' }}>Edit Submission #{editingDisplayId}</h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px', marginBottom: '20px' }}>
               {Object.keys(editData).map(key => (
                 <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
