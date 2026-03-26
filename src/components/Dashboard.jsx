@@ -38,6 +38,8 @@ export default function Dashboard() {
   const [editingDisplayId, setEditingDisplayId] = useState(null)
   const [editData, setEditData] = useState({})
   const [sortBy, setSortBy] = useState('dateDesc')
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+  const [confirmClearAll, setConfirmClearAll] = useState(false)
 
   const loadSubmissions = async () => {
     try {
@@ -74,22 +76,24 @@ export default function Dashboard() {
     sessionStorage.removeItem('dashboardAuthenticated')
   }
 
-  const deleteSubmission = async (id) => {
-    showModal('error', 'Confirm Deletion', 'Are you sure you want to delete this submission? This action cannot be undone.')
-
-    // For now, we'll use a simple approach - in a real app you'd want a confirmation modal
-    if (window.confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
-      try {
-        const res = await fetch(`/api/submissions?id=${id}`, {
-          method: 'DELETE'
-        })
-        if (!res.ok) throw new Error('Failed to delete submission')
-        await loadSubmissions() // Reload the list
-        showModal('success', 'Submission Deleted', 'The submission has been successfully deleted.')
-      } catch (e) {
-        showModal('error', 'Delete Failed', 'Error deleting submission: ' + e.message)
-      }
+  const confirmDelete = async () => {
+    if (!confirmDeleteId) return;
+    try {
+      const res = await fetch(`/api/submissions?id=${confirmDeleteId}`, {
+        method: 'DELETE'
+      })
+      if (!res.ok) throw new Error('Failed to delete submission')
+      await loadSubmissions() // Reload the list
+      setConfirmDeleteId(null)
+      showModal('success', 'Submission Deleted', 'The submission has been successfully deleted.')
+    } catch (e) {
+      setConfirmDeleteId(null)
+      showModal('error', 'Delete Failed', 'Error deleting submission: ' + e.message)
     }
+  }
+
+  const deleteSubmission = (id) => {
+    setConfirmDeleteId(id)
   }
 
   const openEditModal = (submission) => {
@@ -120,21 +124,21 @@ export default function Dashboard() {
     }
   }
 
-  const clearAllSubmissions = async () => {
-    if (!confirm('Are you sure you want to delete ALL submissions? This action cannot be undone.')) {
-      return
-    }
-
+  const confirmClearAllSubmissions = async () => {
     try {
-      const res = await fetch('/api/submissions', {
-        method: 'DELETE'
-      })
+      const res = await fetch('/api/submissions', { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to clear submissions')
       await loadSubmissions() // Reload the list
+      setConfirmClearAll(false)
       showModal('success', 'All Submissions Cleared', 'All submissions have been successfully cleared.')
     } catch (e) {
+      setConfirmClearAll(false)
       showModal('error', 'Clear Failed', 'Error clearing submissions: ' + e.message)
     }
+  }
+
+  const clearAllSubmissions = () => {
+    setConfirmClearAll(true)
   }
 
   // Show login form if not authenticated
@@ -735,6 +739,48 @@ export default function Dashboard() {
                 onClick={saveEdit}
                 style={{ padding: '8px 20px', background: 'var(--brand-gold)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
               >Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Single Submission Modal */}
+      {confirmDeleteId && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050, padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.15)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⚠️</div>
+            <h3 style={{ marginTop: 0, color: 'var(--brand-brown)', marginBottom: '10px' }}>Confirm Deletion</h3>
+            <p style={{ color: 'var(--text)', marginBottom: '25px', lineHeight: '1.5' }}>Are you sure you want to delete this submission? This action cannot be undone.</p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                style={{ padding: '8px 20px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: 'pointer', fontWeight: '500' }}
+              >Cancel</button>
+              <button
+                onClick={confirmDelete}
+                style={{ padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+              >Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clear All Submissions Modal */}
+      {confirmClearAll && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050, padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.15)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '10px' }}>🚨</div>
+            <h3 style={{ marginTop: 0, color: '#dc2626', marginBottom: '10px' }}>Clear All Submissions</h3>
+            <p style={{ color: 'var(--text)', marginBottom: '25px', lineHeight: '1.5' }}>Are you sure you want to PERMANENTLY delete ALL submissions and files? This action cannot be undone.</p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+              <button
+                onClick={() => setConfirmClearAll(false)}
+                style={{ padding: '8px 20px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: 'pointer', fontWeight: '500' }}
+              >Cancel</button>
+              <button
+                onClick={confirmClearAllSubmissions}
+                style={{ padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+              >Delete All</button>
             </div>
           </div>
         </div>
