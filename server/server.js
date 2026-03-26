@@ -204,6 +204,69 @@ app.delete('/api/submissions', async (req, res) => {
   }
 })
 
+// Backup Database
+app.get('/api/submissions/backup', async (req, res) => {
+  try {
+    const subResult = await pool.query('SELECT * FROM submissions ORDER BY id ASC')
+    const fileResult = await pool.query('SELECT * FROM files ORDER BY id ASC')
+
+    const backupData = {
+      version: '1.0',
+      timestamp: new Date().toISOString(),
+      submissions: subResult.rows,
+      files: fileResult.rows
+    }
+
+    res.setHeader('Content-Type', 'application/json')
+    res.setHeader('Content-Disposition', 'attachment; filename="retiree-db-backup.json"')
+    res.send(JSON.stringify(backupData, null, 2))
+  } catch (error) {
+    console.error('Backup error:', error)
+    res.status(500).json({ error: 'Failed to generate backup' })
+  }
+})
+
+// Restore Database
+app.post('/api/submissions/restore', express.json({ limit: '50mb' }), async (req, res) => {
+  const client = await pool.connect()
+  try {
+    const { submissions, files } = req.body
+    if (!Array.isArray(submissions) || !Array.isArray(files)) {
+      return res.status(400).json({ error: 'Invalid backup format' })
+    }
+
+    await client.query('BEGIN')
+    await client.query('DELETE FROM files')
+    await client.query('DELETE FROM submissions')
+
+    for (const sub of submissions) {
+      await client.query(
+        'INSERT INTO submissions (id, created_at, data_json) VALUES ($1, $2, $3)',
+        [sub.id, sub.created_at, JSON.stringify(sub.data_json)]
+      )
+    }
+
+    for (const file of files) {
+      await client.query(
+        'INSERT INTO files (id, submission_id, field_name, original_name, stored_path) VALUES ($1, $2, $3, $4, $5)',
+        [file.id, file.submission_id, file.field_name, file.original_name, file.stored_path]
+      )
+    }
+
+    await client.query("SELECT setval('submissions_id_seq', COALESCE((SELECT MAX(id)+1 FROM submissions), 1), false)")
+    await client.query("SELECT setval('files_id_seq', COALESCE((SELECT MAX(id)+1 FROM files), 1), false)")
+
+    await client.query('COMMIT')
+    res.status(200).json({ success: true, message: 'Database restored successfully' })
+  } catch (error) {
+    await client.query('ROLLBACK')
+    console.error('Restore error:', error)
+    res.status(500).json({ error: 'Failed to restore database', details: error.message })
+  } finally {
+    client.release()
+  }
+})
+
 // Update a specific submission's data_json
 app.put('/api/submissions', async (req, res) => {
   try {
