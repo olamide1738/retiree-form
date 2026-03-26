@@ -49,9 +49,10 @@ export default async function handler(req, res) {
 
         // Restore Submissions identically
         for (const sub of submissions) {
+            const formattedData = typeof sub.data_json === 'string' ? sub.data_json : JSON.stringify(sub.data_json);
             await client.query(
                 'INSERT INTO submissions (id, created_at, data_json) VALUES ($1, $2, $3)',
-                [sub.id, sub.created_at, JSON.stringify(sub.data_json)]
+                [sub.id, sub.created_at, formattedData]
             )
         }
 

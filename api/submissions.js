@@ -58,12 +58,24 @@ export default async function handler(req, res) {
 
       const submissions = submissionsResult.rows
 
-      const result = submissions.map(r => ({
-        id: r.id,
-        createdAt: r.created_at,
-        data: JSON.parse(r.data_json || '{}'),
-        files: filesBySubmission[r.id] || []
-      }))
+      const result = submissions.map(r => {
+        let parsedData = r.data_json || {}
+        // Defensive unwrapping to fix double-stringified objects mapping to character indices
+        while (typeof parsedData === 'string') {
+          try {
+            parsedData = JSON.parse(parsedData)
+          } catch (e) {
+            break
+          }
+        }
+
+        return {
+          id: r.id,
+          createdAt: r.created_at,
+          data: parsedData,
+          files: filesBySubmission[r.id] || []
+        }
+      })
 
       res.status(200).json(result)
 

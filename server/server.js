@@ -97,12 +97,22 @@ app.get('/api/submissions', async (_req, res) => {
       })
     })
 
-    const result = submissionsResult.rows.map(r => ({
-      id: r.id,
-      createdAt: r.created_at,
-      data: JSON.parse(r.data_json || '{}'),
-      files: filesBySubmission[r.id] || [],
-    }))
+    const result = submissionsResult.rows.map(r => {
+      let parsedData = r.data_json || {}
+      while (typeof parsedData === 'string') {
+        try {
+          parsedData = JSON.parse(parsedData)
+        } catch (e) {
+          break
+        }
+      }
+      return {
+        id: r.id,
+        createdAt: r.created_at,
+        data: parsedData,
+        files: filesBySubmission[r.id] || [],
+      }
+    })
 
     res.json(result)
   } catch (error) {
@@ -240,9 +250,10 @@ app.post('/api/submissions/restore', express.json({ limit: '50mb' }), async (req
     await client.query('DELETE FROM submissions')
 
     for (const sub of submissions) {
+      const formattedData = typeof sub.data_json === 'string' ? sub.data_json : JSON.stringify(sub.data_json);
       await client.query(
         'INSERT INTO submissions (id, created_at, data_json) VALUES ($1, $2, $3)',
-        [sub.id, sub.created_at, JSON.stringify(sub.data_json)]
+        [sub.id, sub.created_at, formattedData]
       )
     }
 
