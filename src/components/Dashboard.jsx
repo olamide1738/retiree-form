@@ -33,14 +33,22 @@ export default function Dashboard() {
     setModal(prev => ({ ...prev, isOpen: false }))
   }
 
-  // (edit state removed)
+  const [editModal, setEditModal] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editData, setEditData] = useState({})
 
   const loadSubmissions = async () => {
     try {
       const res = await fetch('/api/submissions')
       if (!res.ok) throw new Error('Failed to load submissions')
       const json = await res.json()
-      setRows(json)
+      // Sort submissions alphabetically by full name
+      const sortedJson = json.sort((a, b) => {
+        const nameA = String(a.data?.fullName || '').toLowerCase()
+        const nameB = String(b.data?.fullName || '').toLowerCase()
+        return nameA.localeCompare(nameB)
+      })
+      setRows(sortedJson)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -72,7 +80,7 @@ export default function Dashboard() {
 
   const deleteSubmission = async (id) => {
     showModal('error', 'Confirm Deletion', 'Are you sure you want to delete this submission? This action cannot be undone.')
-    
+
     // For now, we'll use a simple approach - in a real app you'd want a confirmation modal
     if (window.confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
       try {
@@ -85,6 +93,33 @@ export default function Dashboard() {
       } catch (e) {
         showModal('error', 'Delete Failed', 'Error deleting submission: ' + e.message)
       }
+    }
+  }
+
+  const openEditModal = (submission) => {
+    setEditingId(submission.id)
+    setEditData(submission.data || {})
+    setEditModal(true)
+  }
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target
+    setEditData(prev => ({ ...prev, [name]: value }))
+  }
+
+  const saveEdit = async () => {
+    try {
+      const res = await fetch(`/api/submissions/${editingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editData)
+      });
+      if (!res.ok) throw new Error('Failed to update submission');
+      await loadSubmissions();
+      setEditModal(false);
+      showModal('success', 'Update Successful', 'The submission has been updated.');
+    } catch (e) {
+      showModal('error', 'Update Failed', e.message);
     }
   }
 
@@ -184,10 +219,10 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
+      <div className="dashboard-header" style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         marginBottom: '20px',
         flexWrap: 'wrap',
         gap: '10px'
@@ -209,15 +244,15 @@ export default function Dashboard() {
             <span>{rows.length} {rows.length === 1 ? 'Submission' : 'Submissions'}</span>
           </div>
         </div>
-        <div className="dashboard-actions" style={{ 
-          display: 'flex', 
+        <div className="dashboard-actions" style={{
+          display: 'flex',
           gap: '10px',
           flexWrap: 'wrap',
           justifyContent: 'flex-end'
         }}>
-          <a 
-            href="/api/submissions/export" 
-            target="_blank" 
+          <a
+            href="/api/submissions/export"
+            target="_blank"
             rel="noreferrer"
             style={{
               backgroundColor: 'var(--brand-gold)',
@@ -237,9 +272,9 @@ export default function Dashboard() {
           >
             Export to Excel
           </a>
-          <a 
-            href="/api/submissions/export.pdf" 
-            target="_blank" 
+          <a
+            href="/api/submissions/export.pdf"
+            target="_blank"
             rel="noreferrer"
             style={{
               backgroundColor: 'var(--brand-gold)',
@@ -259,7 +294,7 @@ export default function Dashboard() {
           >
             Export to PDF
           </a>
-          <button 
+          <button
             onClick={handleLogout}
             style={{
               backgroundColor: '#6b7280',
@@ -275,7 +310,7 @@ export default function Dashboard() {
           >
             Logout
           </button>
-          <button 
+          <button
             onClick={loadSubmissions}
             style={{
               backgroundColor: '#3b82f6',
@@ -291,7 +326,7 @@ export default function Dashboard() {
           >
             🔄 Refresh
           </button>
-          <button 
+          <button
             onClick={clearAllSubmissions}
             style={{
               backgroundColor: '#dc2626',
@@ -397,9 +432,9 @@ export default function Dashboard() {
               padding: '1rem',
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
                 alignItems: 'center',
                 marginBottom: '0.75rem',
                 paddingBottom: '0.5rem',
@@ -408,24 +443,40 @@ export default function Dashboard() {
                 <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--brand-brown)' }}>
                   Submission #{r.id}
                 </h3>
-                <button 
-                  onClick={() => deleteSubmission(r.id)}
-                  style={{
-                    backgroundColor: '#dc2626',
-                    color: 'white',
-                    border: 'none',
-                    padding: '6px 12px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.8rem'
-                  }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = '#b91c1c'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = '#dc2626'}
-                >
-                  Delete
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => openEditModal(r)}
+                    style={{
+                      backgroundColor: '#f59e0b',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem'
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => deleteSubmission(r.id)}
+                    style={{
+                      backgroundColor: '#dc2626',
+                      color: 'white',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '0.8rem'
+                    }}
+                    onMouseOver={(e) => e.target.style.backgroundColor = '#b91c1c'}
+                    onMouseOut={(e) => e.target.style.backgroundColor = '#dc2626'}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              
+
               <div style={{ display: 'grid', gap: '0.5rem' }}>
                 {allKeys.filter(k => k !== 'id' && k !== 'files').map(k => {
                   if (k === 'createdAt') {
@@ -453,17 +504,17 @@ export default function Dashboard() {
                   }
                   return null
                 })}
-                
+
                 {Array.isArray(r.files) && r.files.length > 0 && (
                   <div style={{ marginTop: '0.5rem' }}>
                     <div style={{ fontWeight: '600', color: 'var(--text)', marginBottom: '0.25rem' }}>Files:</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                       {r.files.map(f => (
-                        <a 
+                        <a
                           key={f.id}
-                          className="file-link" 
-                          href={`/api/files/${f.id}`} 
-                          target="_blank" 
+                          className="file-link"
+                          href={`/api/files/${f.id}`}
+                          target="_blank"
                           rel="noreferrer"
                           style={{ fontSize: '0.85rem', wordBreak: 'break-word' }}
                         >
@@ -479,30 +530,30 @@ export default function Dashboard() {
         </div>
       ) : (
         // Desktop Table Layout
-        <div className="dashboard-table-container" style={{ 
-          overflowX: 'auto', 
+        <div className="dashboard-table-container" style={{
+          overflowX: 'auto',
           WebkitOverflowScrolling: 'touch',
           margin: '0 -1rem',
           padding: '0 1rem'
         }}>
-          <table className="dashboard-table" style={{ 
-            width: '100%', 
+          <table className="dashboard-table" style={{
+            width: '100%',
             borderCollapse: 'collapse'
           }}>
             <thead>
               <tr>
                 {allKeys.map(k => (
-                  <th key={k} style={{ 
-                    textAlign: 'left', 
-                    borderBottom: '1px solid #e2e8f0', 
+                  <th key={k} style={{
+                    textAlign: 'left',
+                    borderBottom: '1px solid #e2e8f0',
                     padding: '8px',
                     fontSize: '0.9rem',
                     fontWeight: '600'
                   }}>{k}</th>
                 ))}
-                <th style={{ 
-                  textAlign: 'left', 
-                  borderBottom: '1px solid #e2e8f0', 
+                <th style={{
+                  textAlign: 'left',
+                  borderBottom: '1px solid #e2e8f0',
                   padding: '8px',
                   fontSize: '0.9rem',
                   fontWeight: '600'
@@ -513,8 +564,8 @@ export default function Dashboard() {
               {rows.map(r => (
                 <tr key={r.id}>
                   {allKeys.map(k => {
-                    if (k === 'id') return <td key={k} style={{ 
-                      borderBottom: '1px solid #f1f5f9', 
+                    if (k === 'id') return <td key={k} style={{
+                      borderBottom: '1px solid #f1f5f9',
                       padding: '8px',
                       fontSize: '0.85rem'
                     }}>{r.id}</td>
@@ -523,16 +574,16 @@ export default function Dashboard() {
                         const d = new Date(r.createdAt)
                         return isNaN(d.getTime()) ? String(r.createdAt) : d.toISOString().slice(0, 10)
                       })()
-                      return <td key={k} style={{ 
-                        borderBottom: '1px solid #f1f5f9', 
+                      return <td key={k} style={{
+                        borderBottom: '1px solid #f1f5f9',
                         padding: '8px',
                         fontSize: '0.85rem'
                       }}>{dateOnly}</td>
                     }
                     if (k === 'files') {
                       return (
-                        <td key={k} style={{ 
-                          borderBottom: '1px solid #f1f5f9', 
+                        <td key={k} style={{
+                          borderBottom: '1px solid #f1f5f9',
                           padding: '8px',
                           fontSize: '0.85rem'
                         }}>
@@ -540,10 +591,10 @@ export default function Dashboard() {
                             <ul style={{ margin: 0, paddingLeft: '1rem' }}>
                               {r.files.map(f => (
                                 <li key={f.id} style={{ marginBottom: '2px' }}>
-                                  <a 
-                                    className="file-link" 
-                                    href={`/api/files/${f.id}`} 
-                                    target="_blank" 
+                                  <a
+                                    className="file-link"
+                                    href={`/api/files/${f.id}`}
+                                    target="_blank"
                                     rel="noreferrer"
                                     style={{ fontSize: '0.8rem' }}
                                   >
@@ -557,21 +608,37 @@ export default function Dashboard() {
                       )
                     }
                     const value = r.data?.[k] ?? ''
-                    return <td key={k} style={{ 
-                      borderBottom: '1px solid #f1f5f9', 
-                      padding: '8px', 
+                    return <td key={k} style={{
+                      borderBottom: '1px solid #f1f5f9',
+                      padding: '8px',
                       verticalAlign: 'top',
                       fontSize: '0.85rem',
                       wordBreak: 'break-word',
                       maxWidth: '150px'
                     }}>{String(value)}</td>
                   })}
-                  <td style={{ 
-                    borderBottom: '1px solid #f1f5f9', 
+                  <td style={{
+                    borderBottom: '1px solid #f1f5f9',
                     padding: '8px',
                     whiteSpace: 'nowrap'
                   }}>
-                    <button 
+                    <button
+                      onClick={() => openEditModal(r)}
+                      style={{
+                        backgroundColor: '#f59e0b',
+                        color: 'white',
+                        border: 'none',
+                        padding: '6px 10px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem',
+                        minWidth: '50px',
+                        marginRight: '8px'
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
                       onClick={() => deleteSubmission(r.id)}
                       style={{
                         backgroundColor: '#dc2626',
@@ -595,7 +662,7 @@ export default function Dashboard() {
           </table>
         </div>
       )}
-      
+
       {/* Modal */}
       <Modal
         isOpen={modal.isOpen}
@@ -606,7 +673,39 @@ export default function Dashboard() {
         duration={5000}
       />
 
-      {/* edit modal removed */}
+      {editModal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.15)' }}>
+            <h3 style={{ marginTop: 0, marginBottom: '20px', color: 'var(--brand-brown)' }}>Edit Submission #{editingId}</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+              {Object.keys(editData).map(key => (
+                <label key={key} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                  <span style={{ fontWeight: '600', fontSize: '0.85rem', color: 'var(--text)' }}>
+                    {key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                  </span>
+                  <input
+                    type="text"
+                    name={key}
+                    value={editData[key] || ''}
+                    onChange={handleEditChange}
+                    style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.95rem' }}
+                  />
+                </label>
+              ))}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
+              <button
+                onClick={() => setEditModal(false)}
+                style={{ padding: '8px 16px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: 'pointer', fontWeight: '500' }}
+              >Cancel</button>
+              <button
+                onClick={saveEdit}
+                style={{ padding: '8px 20px', background: 'var(--brand-gold)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+              >Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

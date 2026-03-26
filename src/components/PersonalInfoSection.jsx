@@ -1,4 +1,3 @@
-import { countries } from "../data/countries";
 import DatePickerInput from "./DatePickerInput";
 
 export default function PersonalInfoSection({ values, onChange, errors }) {
@@ -45,12 +44,8 @@ export default function PersonalInfoSection({ values, onChange, errors }) {
             onChange={onChange}
             required
           >
-            <option value="">Select a country</option>
-            {countries.map((country) => (
-              <option key={country} value={country}>
-                {country}
-              </option>
-            ))}
+            <option value="">Select nationality</option>
+            <option value="Nigerian">Nigerian</option>
           </select>
         </label>
 
@@ -125,6 +120,26 @@ export default function PersonalInfoSection({ values, onChange, errors }) {
           {errors?.nextOfKinPhone && (
             <div className="field-error">{errors.nextOfKinPhone}</div>
           )}
+        </label>
+
+        <label>
+          <span>Relationship with Next of Kin</span>
+          <select
+            name="nextOfKinRelationship"
+            value={values.nextOfKinRelationship}
+            onChange={onChange}
+            required
+          >
+            <option value="">Select relationship</option>
+            <option value="Mother">Mother</option>
+            <option value="Father">Father</option>
+            <option value="Brother">Brother</option>
+            <option value="Sister">Sister</option>
+            <option value="Uncle">Uncle</option>
+            <option value="Aunty">Aunty</option>
+            <option value="Friend">Friend</option>
+            <option value="Other">Other</option>
+          </select>
         </label>
       </div>
     </fieldset>

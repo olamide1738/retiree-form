@@ -25,7 +25,8 @@ function App() {
     phoneNumber: '',
     emailAddress: '',
     nextOfKinName: '',
-    nextOfKinPhone: ''
+    nextOfKinPhone: '',
+    nextOfKinRelationship: ''
   })
 
   const [employmentInfo, setEmploymentInfo] = useState({
@@ -311,7 +312,8 @@ function App() {
         phoneNumber: '',
         emailAddress: '',
         nextOfKinName: '',
-        nextOfKinPhone: ''
+        nextOfKinPhone: '',
+        nextOfKinRelationship: ''
       })
       setEmploymentInfo({
         organization: '',

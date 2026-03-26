@@ -54,7 +54,7 @@ const initDB = async () => {
         data_json TEXT NOT NULL
       )
     `)
-    
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS files (
         id SERIAL PRIMARY KEY,
@@ -65,7 +65,7 @@ const initDB = async () => {
         FOREIGN KEY(submission_id) REFERENCES submissions(id) ON DELETE CASCADE
       )
     `)
-    
+
     console.log('Database connected and tables created')
   } catch (error) {
     console.error('Database connection failed:', error)
@@ -119,18 +119,18 @@ app.get('/api/files/:id', async (req, res) => {
       [req.params.id]
     )
     const files = result.rows
-    
+
     if (files.length === 0) {
       return res.status(404).json({ error: 'File not found' })
     }
-    
+
     const file = files[0]
     const absolutePath = path.resolve(file.stored_path)
-    
+
     if (!fs.existsSync(absolutePath)) {
       return res.status(404).json({ error: 'File missing on disk' })
     }
-    
+
     res.download(absolutePath, file.original_name)
   } catch (error) {
     console.error('Error downloading file:', error)
@@ -142,14 +142,14 @@ app.get('/api/files/:id', async (req, res) => {
 app.delete('/api/submissions/:id', async (req, res) => {
   try {
     const submissionId = req.params.id
-    
+
     // Get files to delete from disk
     const result = await pool.query(
       'SELECT stored_path FROM files WHERE submission_id = $1',
       [submissionId]
     )
     const files = result.rows
-    
+
     // Delete physical files
     files.forEach(file => {
       const absolutePath = path.resolve(file.stored_path)
@@ -161,17 +161,17 @@ app.delete('/api/submissions/:id', async (req, res) => {
         }
       }
     })
-    
+
     // Delete from database (files will be deleted due to foreign key constraint)
     const deleteResult = await pool.query(
       'DELETE FROM submissions WHERE id = $1',
       [submissionId]
     )
-    
+
     if (deleteResult.rowCount === 0) {
       return res.status(404).json({ error: 'Submission not found' })
     }
-    
+
     res.json({ success: true, deletedId: submissionId })
   } catch (error) {
     console.error('Error deleting submission:', error)
@@ -180,7 +180,27 @@ app.delete('/api/submissions/:id', async (req, res) => {
 })
 
 // Update a specific submission's data_json
-// (edit endpoint removed)
+app.put('/api/submissions/:id', async (req, res) => {
+  try {
+    const submissionId = req.params.id
+    const updateBody = req.body || {}
+
+    const checkResult = await pool.query('SELECT id FROM submissions WHERE id = $1', [submissionId])
+    if (checkResult.rowCount === 0) {
+      return res.status(404).json({ error: 'Submission not found' })
+    }
+
+    await pool.query(
+      'UPDATE submissions SET data_json = $1 WHERE id = $2',
+      [JSON.stringify(updateBody), submissionId]
+    )
+
+    res.json({ success: true, updatedId: submissionId })
+  } catch (error) {
+    console.error('Error updating submission:', error)
+    res.status(500).json({ error: 'Failed to update submission' })
+  }
+})
 
 // Clear all submissions and their files
 app.delete('/api/submissions', async (req, res) => {
@@ -188,7 +208,7 @@ app.delete('/api/submissions', async (req, res) => {
     // Get all files to delete from disk
     const result = await pool.query('SELECT stored_path FROM files')
     const files = result.rows
-    
+
     // Delete all physical files
     files.forEach(file => {
       const absolutePath = path.resolve(file.stored_path)
@@ -200,11 +220,11 @@ app.delete('/api/submissions', async (req, res) => {
         }
       }
     })
-    
+
     // Clear database tables
     await pool.query('DELETE FROM files')
     await pool.query('DELETE FROM submissions')
-    
+
     res.json({ success: true, message: 'All submissions cleared' })
   } catch (error) {
     console.error('Error clearing submissions:', error)
@@ -232,13 +252,13 @@ app.post('/api/submissions', upload.fields(fileFields), async (req, res) => {
       'INSERT INTO submissions (created_at, data_json) VALUES ($1, $2) RETURNING id',
       [createdAt, JSON.stringify(body)]
     )
-    
+
     const submissionId = result.rows[0].id
 
     // Insert files metadata
     const files = req.files || {}
     const fileInserts = []
-    
+
     Object.keys(files).forEach((field) => {
       files[field].forEach((f) => {
         fileInserts.push([submissionId, field, f.originalname, f.path])
@@ -246,11 +266,11 @@ app.post('/api/submissions', upload.fields(fileFields), async (req, res) => {
     })
 
     if (fileInserts.length > 0) {
-      const placeholders = fileInserts.map((_, i) => 
+      const placeholders = fileInserts.map((_, i) =>
         `($${i * 4 + 1}, $${i * 4 + 2}, $${i * 4 + 3}, $${i * 4 + 4})`
       ).join(',')
       const flat = fileInserts.flat()
-      
+
       await pool.query(
         `INSERT INTO files (submission_id, field_name, original_name, stored_path) VALUES ${placeholders}`,
         flat
@@ -271,7 +291,7 @@ app.get('/api/submissions/export', async (_req, res) => {
     const filesResult = await pool.query('SELECT * FROM files')
     const submissions = submissionsResult.rows
     const files = filesResult.rows
-    
+
     const filesBySubmission = {}
     files.forEach(f => {
       if (!filesBySubmission[f.submission_id]) filesBySubmission[f.submission_id] = []
@@ -293,6 +313,7 @@ app.get('/api/submissions/export', async (_req, res) => {
       ['Email Address', 'emailAddress'],
       ['Next of Kin Name', 'nextOfKinName'],
       ['Next of Kin Phone', 'nextOfKinPhone'],
+      ['Relationship with Next of Kin', 'nextOfKinRelationship'],
       ['Organization', 'organization'],
       ['Job Title', 'jobTitle'],
       ['Department', 'department'],
@@ -311,7 +332,7 @@ app.get('/api/submissions/export', async (_req, res) => {
       ['Health Status', 'healthStatus'],
       ['Additional Comments', 'additionalComments']
     ]
-    
+
     const fileHeaders = [
       ['Retirement Letter (file)', 'retirementLetter'],
       ['Birth Cert / ID (file)', 'birthCertOrId'],
@@ -320,19 +341,19 @@ app.get('/api/submissions/export', async (_req, res) => {
       ['Declarant Signature (file)', 'declarantSignature'],
       ['Witness Signature (file)', 'witnessSignature']
     ]
-    
+
     const allHeaders = [...headers, ...fileHeaders]
-    sheet.columns = allHeaders.map(([header, key]) => ({ 
-      header, 
-      key, 
-      width: Math.max(18, header.length + 2) 
+    sheet.columns = allHeaders.map(([header, key]) => ({
+      header,
+      key,
+      width: Math.max(18, header.length + 2)
     }))
 
     submissions.forEach((row) => {
       const data = JSON.parse(row.data_json || '{}')
       const record = { id: row.id, created_at: row.created_at }
-      headers.slice(2).forEach(([, key]) => { 
-        record[key] = data[key] || '' 
+      headers.slice(2).forEach(([, key]) => {
+        record[key] = data[key] || ''
       })
 
       const submissionFiles = filesBySubmission[row.id] || []
@@ -341,13 +362,13 @@ app.get('/api/submissions/export', async (_req, res) => {
         acc[f.field_name].push(f)
         return acc
       }, {})
-      
+
       record.retirementLetter = (byField.retirementLetter?.[0]?.original_name) || ''
       record.birthCertOrId = (byField.birthCertOrId?.[0]?.original_name) || ''
       record.passportPhoto = (byField.passportPhoto?.[0]?.original_name) || ''
       record.declarantSignature = (byField.declarantSignature?.[0]?.original_name) || ''
       record.witnessSignature = (byField.witnessSignature?.[0]?.original_name) || ''
-      record.otherDocuments = (byField.otherDocuments ? 
+      record.otherDocuments = (byField.otherDocuments ?
         byField.otherDocuments.map(f => f.original_name).join(', ') : '')
 
       sheet.addRow(record)
@@ -370,7 +391,7 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
     const filesResult = await pool.query('SELECT * FROM files')
     const submissions = submissionsResult.rows
     const files = filesResult.rows
-    
+
     const filesBySubmission = {}
     files.forEach(f => {
       if (!filesBySubmission[f.submission_id]) filesBySubmission[f.submission_id] = []
@@ -395,6 +416,7 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
         emailAddress: 'Email Address',
         nextOfKinName: 'Next of Kin Name',
         nextOfKinPhone: 'Next of Kin Phone Number',
+        nextOfKinRelationship: 'Relationship with Next of Kin',
         organization: 'Organization',
         jobTitle: 'Job Title at Retirement',
         department: 'Department/Unit',
@@ -419,26 +441,26 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
     // Helper function to format values
     const formatValue = (key, value) => {
       if (!value || value === '') return 'Not provided'
-      
+
       // Format dates
       if (key.includes('Date') || key.includes('date')) {
         const date = new Date(value)
         if (!isNaN(date.getTime())) {
-          return date.toLocaleDateString('en-US', { 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
+          return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
           })
         }
       }
-      
+
       return String(value)
     }
 
     doc.fontSize(20).text('RETIREE FORM SUBMISSIONS REPORT', { align: 'center' })
-    doc.fontSize(12).text(`Generated on: ${new Date().toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
+    doc.fontSize(12).text(`Generated on: ${new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -447,12 +469,12 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
 
     submissions.forEach((row, index) => {
       const data = JSON.parse(row.data_json || '{}')
-      
+
       // Submission header
       doc.fontSize(14).text(`SUBMISSION #${row.id}`, { underline: true })
-      doc.fontSize(10).text(`Submitted: ${new Date(row.created_at).toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
+      doc.fontSize(10).text(`Submitted: ${new Date(row.created_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
@@ -462,7 +484,7 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
       // Personal Information Section
       doc.fontSize(12).text('PERSONAL INFORMATION', { underline: true })
       doc.moveDown(0.5)
-      const personalFields = ['fullName', 'dateOfBirth', 'gender', 'nationality', 'residentialAddress', 'phoneNumber', 'emailAddress', 'nextOfKinName', 'nextOfKinPhone']
+      const personalFields = ['fullName', 'dateOfBirth', 'gender', 'nationality', 'residentialAddress', 'phoneNumber', 'emailAddress', 'nextOfKinName', 'nextOfKinPhone', 'nextOfKinRelationship']
       personalFields.forEach(key => {
         if (data[key] !== undefined) {
           doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
@@ -484,7 +506,7 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
       // Pension/Benefits Information Section
       doc.fontSize(12).text('PENSION/BENEFITS INFORMATION', { underline: true })
       doc.moveDown(0.5)
-        const pensionFields = ['pensionNumber', 'bankName', 'accountNumber', 'pensionPaymentMode']
+      const pensionFields = ['pensionNumber', 'bankName', 'accountNumber', 'pensionPaymentMode']
       pensionFields.forEach(key => {
         if (data[key] !== undefined) {
           doc.fontSize(10).text(`${formatFieldName(key)}: ${formatValue(key, data[key])}`)
@@ -519,7 +541,7 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
       if (submissionFiles.length) {
         doc.fontSize(12).text('UPLOADED DOCUMENTS', { underline: true })
         doc.moveDown(0.5)
-        
+
         // Define all possible file fields with their proper labels
         const fileFieldLabels = {
           retirementLetter: 'Copy of Retirement Letter / Service Certificate',
@@ -529,14 +551,14 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
           declarantSignature: 'Declarant Signature',
           witnessSignature: 'Witness / HR Officer Signature'
         }
-        
+
         // Group files by field name
         const filesByField = {}
         submissionFiles.forEach(f => {
           if (!filesByField[f.field_name]) filesByField[f.field_name] = []
           filesByField[f.field_name].push(f)
         })
-        
+
         // Display each file field category
         Object.keys(fileFieldLabels).forEach(fieldName => {
           const fieldFiles = filesByField[fieldName] || []
@@ -555,13 +577,13 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
             doc.moveDown(0.3)
           }
         })
-        
+
         doc.moveDown(1)
       } else {
         // Show all file fields as "Not provided" if no files at all
         doc.fontSize(12).text('UPLOADED DOCUMENTS', { underline: true })
         doc.moveDown(0.5)
-        
+
         const fileFieldLabels = {
           retirementLetter: 'Copy of Retirement Letter / Service Certificate',
           birthCertOrId: 'Birth Certificate / National ID',
@@ -570,12 +592,12 @@ app.get('/api/submissions/export.pdf', async (_req, res) => {
           declarantSignature: 'Declarant Signature',
           witnessSignature: 'Witness / HR Officer Signature'
         }
-        
+
         Object.values(fileFieldLabels).forEach(label => {
           doc.fontSize(10).text(`${label}: Not provided`)
           doc.moveDown(0.3)
         })
-        
+
         doc.moveDown(1)
       }
 
@@ -603,7 +625,7 @@ if (process.env.NODE_ENV === 'production') {
   }).catch(err => {
     console.error('Database initialization failed:', err)
   })
-  
+
   module.exports = app
 } else {
   // For local development
