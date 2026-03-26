@@ -124,22 +124,14 @@ export default function PersonalInfoSection({ values, onChange, errors }) {
 
         <label>
           <span>Relationship with Next of Kin</span>
-          <select
+          <input
+            type="text"
             name="nextOfKinRelationship"
             value={values.nextOfKinRelationship}
             onChange={onChange}
             required
-          >
-            <option value="">Select relationship</option>
-            <option value="Mother">Mother</option>
-            <option value="Father">Father</option>
-            <option value="Brother">Brother</option>
-            <option value="Sister">Sister</option>
-            <option value="Uncle">Uncle</option>
-            <option value="Aunty">Aunty</option>
-            <option value="Friend">Friend</option>
-            <option value="Other">Other</option>
-          </select>
+            placeholder="e.g. Brother, Sister, Friend"
+          />
         </label>
       </div>
     </fieldset>
