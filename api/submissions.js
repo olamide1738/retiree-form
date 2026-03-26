@@ -110,11 +110,17 @@ export default async function handler(req, res) {
       }
 
     } else if (req.method === 'DELETE') {
-      const pathname = req.url || '';
+      let submissionId = req.query?.id || (req.body && req.body.id);
+      if (!submissionId && req.url) {
+        const match = req.url.match(/[?&]id=([^&]+)/);
+        if (match) submissionId = match[1];
+        else if (req.url.includes('/submissions/') && req.url.split('/').length > 3) {
+          submissionId = req.url.split('/').pop();
+        }
+      }
 
-      if (pathname.includes('/submissions/') && pathname.split('/').length > 3) {
+      if (submissionId) {
         // Delete specific submission
-        const submissionId = pathname.split('/').pop()
 
         // Delete from database (files will be deleted due to foreign key constraint)
         const deleteResult = await client.query(
