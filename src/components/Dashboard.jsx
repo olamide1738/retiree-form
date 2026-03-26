@@ -43,8 +43,15 @@ export default function Dashboard() {
   const fileInputRef = useRef(null)
   const [restoreFile, setRestoreFile] = useState(null)
 
-  const loadSubmissions = async () => {
+  // Loading states for actions
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isClearing, setIsClearing] = useState(false)
+  const [isRestoring, setIsRestoring] = useState(false)
+
+  const loadSubmissions = async (showGlobalSpinner = true) => {
     try {
+      if (showGlobalSpinner) setLoading(true)
       const res = await fetch('/api/submissions')
       if (!res.ok) throw new Error('Failed to load submissions')
       const json = await res.json()
@@ -52,7 +59,7 @@ export default function Dashboard() {
     } catch (e) {
       setError(e.message)
     } finally {
-      setLoading(false)
+      if (showGlobalSpinner) setLoading(false)
     }
   }
 
@@ -80,17 +87,20 @@ export default function Dashboard() {
 
   const confirmDelete = async () => {
     if (!confirmDeleteId) return;
+    setIsDeleting(true);
     try {
       const res = await fetch(`/api/submissions?id=${confirmDeleteId}`, {
         method: 'DELETE'
       })
       if (!res.ok) throw new Error('Failed to delete submission')
-      await loadSubmissions() // Reload the list
+      await loadSubmissions(false) // Reload silently
       setConfirmDeleteId(null)
       showModal('success', 'Submission Deleted', 'The submission has been successfully deleted.')
     } catch (e) {
       setConfirmDeleteId(null)
       showModal('error', 'Delete Failed', 'Error deleting submission: ' + e.message)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -111,6 +121,7 @@ export default function Dashboard() {
   }
 
   const saveEdit = async () => {
+    setIsSaving(true)
     try {
       const res = await fetch(`/api/submissions?id=${editingId}`, {
         method: 'PUT',
@@ -118,24 +129,29 @@ export default function Dashboard() {
         body: JSON.stringify(editData)
       });
       if (!res.ok) throw new Error('Failed to update submission');
-      await loadSubmissions();
+      await loadSubmissions(false); // Reload silently
       setEditModal(false);
       showModal('success', 'Update Successful', 'The submission has been updated.');
     } catch (e) {
       showModal('error', 'Update Failed', e.message);
+    } finally {
+      setIsSaving(false)
     }
   }
 
   const confirmClearAllSubmissions = async () => {
+    setIsClearing(true)
     try {
       const res = await fetch('/api/submissions', { method: 'DELETE' })
       if (!res.ok) throw new Error('Failed to clear submissions')
-      await loadSubmissions() // Reload the list
+      await loadSubmissions(false) // Reload silently
       setConfirmClearAll(false)
       showModal('success', 'All Submissions Cleared', 'All submissions have been successfully cleared.')
     } catch (e) {
       setConfirmClearAll(false)
       showModal('error', 'Clear Failed', 'Error clearing submissions: ' + e.message)
+    } finally {
+      setIsClearing(false)
     }
   }
 
@@ -155,7 +171,7 @@ export default function Dashboard() {
 
   const confirmRestore = () => {
     if (!restoreFile) return
-    setLoading(true)
+    setIsRestoring(true)
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
@@ -169,14 +185,14 @@ export default function Dashboard() {
           const errData = await res.json().catch(() => ({}))
           throw new Error(errData.error || 'Failed to restore data')
         }
-        await loadSubmissions()
+        await loadSubmissions(false) // Reload silently
         setRestoreFile(null)
         showModal('success', 'Restore Successful', 'The database has been successfully restored from the backup.')
       } catch (err) {
         setRestoreFile(null)
         showModal('error', 'Restore Failed', err.message)
       } finally {
-        setLoading(false)
+        setIsRestoring(false)
       }
     }
     reader.readAsText(restoreFile)
@@ -818,12 +834,14 @@ export default function Dashboard() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '30px', borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
               <button
                 onClick={() => setEditModal(false)}
-                style={{ padding: '8px 16px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: 'pointer', fontWeight: '500' }}
+                disabled={isSaving}
+                style={{ opacity: isSaving ? 0.7 : 1, padding: '8px 16px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: isSaving ? 'not-allowed' : 'pointer', fontWeight: '500' }}
               >Cancel</button>
               <button
                 onClick={saveEdit}
-                style={{ padding: '8px 20px', background: 'var(--brand-gold)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
-              >Save Changes</button>
+                disabled={isSaving}
+                style={{ opacity: isSaving ? 0.8 : 1, padding: '8px 20px', background: 'var(--brand-gold)', color: 'white', border: 'none', borderRadius: '6px', cursor: isSaving ? 'not-allowed' : 'pointer', fontWeight: '600' }}
+              >{isSaving ? 'Saving...' : 'Save Changes'}</button>
             </div>
           </div>
         </div>
@@ -839,12 +857,14 @@ export default function Dashboard() {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
               <button
                 onClick={() => setConfirmDeleteId(null)}
-                style={{ padding: '8px 20px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: 'pointer', fontWeight: '500' }}
+                disabled={isDeleting}
+                style={{ opacity: isDeleting ? 0.7 : 1, padding: '8px 20px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: isDeleting ? 'not-allowed' : 'pointer', fontWeight: '500' }}
               >Cancel</button>
               <button
                 onClick={confirmDelete}
-                style={{ padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
-              >Delete</button>
+                disabled={isDeleting}
+                style={{ opacity: isDeleting ? 0.8 : 1, padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: isDeleting ? 'not-allowed' : 'pointer', fontWeight: '600' }}
+              >{isDeleting ? 'Deleting...' : 'Delete'}</button>
             </div>
           </div>
         </div>
@@ -860,12 +880,14 @@ export default function Dashboard() {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
               <button
                 onClick={() => setConfirmClearAll(false)}
-                style={{ padding: '8px 20px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: 'pointer', fontWeight: '500' }}
+                disabled={isClearing}
+                style={{ opacity: isClearing ? 0.7 : 1, padding: '8px 20px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: isClearing ? 'not-allowed' : 'pointer', fontWeight: '500' }}
               >Cancel</button>
               <button
                 onClick={confirmClearAllSubmissions}
-                style={{ padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
-              >Delete All</button>
+                disabled={isClearing}
+                style={{ opacity: isClearing ? 0.8 : 1, padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: isClearing ? 'not-allowed' : 'pointer', fontWeight: '600' }}
+              >{isClearing ? 'Deleting All...' : 'Delete All'}</button>
             </div>
           </div>
         </div>
@@ -886,12 +908,14 @@ export default function Dashboard() {
                   setRestoreFile(null)
                   if (fileInputRef.current) fileInputRef.current.value = ''
                 }}
-                style={{ padding: '8px 20px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: 'pointer', fontWeight: '500' }}
+                disabled={isRestoring}
+                style={{ opacity: isRestoring ? 0.7 : 1, padding: '8px 20px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: isRestoring ? 'not-allowed' : 'pointer', fontWeight: '500' }}
               >Cancel</button>
               <button
                 onClick={confirmRestore}
-                style={{ padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
-              >Overwrite Database</button>
+                disabled={isRestoring}
+                style={{ opacity: isRestoring ? 0.8 : 1, padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: isRestoring ? 'not-allowed' : 'pointer', fontWeight: '600' }}
+              >{isRestoring ? 'Restoring Database...' : 'Overwrite Database'}</button>
             </div>
           </div>
         </div>
