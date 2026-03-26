@@ -232,23 +232,6 @@ export default function Dashboard() {
     </div>
   )
 
-  if (!rows.length) return (
-    <div style={{
-      textAlign: 'center',
-      padding: '60px 20px',
-      backgroundColor: 'white',
-      borderRadius: '8px',
-      border: '1px solid #e2e8f0',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-    }}>
-      <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📝</div>
-      <h3 style={{ margin: '0 0 10px 0', color: 'var(--brand-brown)' }}>No Submissions Yet</h3>
-      <p style={{ margin: '0', color: 'var(--muted)', fontSize: '1rem' }}>
-        When users submit the retiree form, their submissions will appear here.
-      </p>
-    </div>
-  )
-
   // Compute display IDs and sorted rows
   const chronological = [...rows].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
   const rowsWithDisplayId = chronological.map((r, index) => ({ ...r, displayId: index + 1 }))
@@ -545,7 +528,22 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {isMobile ? (
+      {!rows.length ? (
+        <div style={{
+          textAlign: 'center',
+          padding: '60px 20px',
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+        }}>
+          <div style={{ fontSize: '4rem', marginBottom: '20px' }}>📝</div>
+          <h3 style={{ margin: '0 0 10px 0', color: 'var(--brand-brown)' }}>No Submissions Yet</h3>
+          <p style={{ margin: '0', color: 'var(--muted)', fontSize: '1rem' }}>
+            When users submit the retiree form, their submissions will appear here.
+          </p>
+        </div>
+      ) : isMobile ? (
         // Mobile Card Layout
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {sortedRows.map(r => (
