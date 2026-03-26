@@ -138,73 +138,45 @@ app.get('/api/files/:id', async (req, res) => {
   }
 })
 
-// Delete a specific submission and its files
-app.delete('/api/submissions/:id', async (req, res) => {
-  try {
-    const submissionId = req.params.id
-
-    // Get files to delete from disk
-    const result = await pool.query(
-      'SELECT stored_path FROM files WHERE submission_id = $1',
-      [submissionId]
-    )
-    const files = result.rows
-
-    // Delete physical files
-    files.forEach(file => {
-      const absolutePath = path.resolve(file.stored_path)
-      if (fs.existsSync(absolutePath)) {
-        try {
-          fs.unlinkSync(absolutePath)
-        } catch (unlinkErr) {
-          console.error('Failed to delete file:', absolutePath, unlinkErr)
-        }
-      }
-    })
-
-    // Delete from database (files will be deleted due to foreign key constraint)
-    const deleteResult = await pool.query(
-      'DELETE FROM submissions WHERE id = $1',
-      [submissionId]
-    )
-
-    if (deleteResult.rowCount === 0) {
-      return res.status(404).json({ error: 'Submission not found' })
-    }
-
-    res.json({ success: true, deletedId: submissionId })
-  } catch (error) {
-    console.error('Error deleting submission:', error)
-    res.status(500).json({ error: 'Failed to delete submission' })
-  }
-})
-
-// Update a specific submission's data_json
-app.put('/api/submissions/:id', async (req, res) => {
-  try {
-    const submissionId = req.params.id
-    const updateBody = req.body || {}
-
-    const checkResult = await pool.query('SELECT id FROM submissions WHERE id = $1', [submissionId])
-    if (checkResult.rowCount === 0) {
-      return res.status(404).json({ error: 'Submission not found' })
-    }
-
-    await pool.query(
-      'UPDATE submissions SET data_json = $1 WHERE id = $2',
-      [JSON.stringify(updateBody), submissionId]
-    )
-
-    res.json({ success: true, updatedId: submissionId })
-  } catch (error) {
-    console.error('Error updating submission:', error)
-    res.status(500).json({ error: 'Failed to update submission' })
-  }
-})
-
-// Clear all submissions and their files
+// Delete specific submission or all submissions
 app.delete('/api/submissions', async (req, res) => {
   try {
+    const submissionId = req.query.id;
+
+    if (submissionId) {
+      // Get files to delete from disk
+      const result = await pool.query(
+        'SELECT stored_path FROM files WHERE submission_id = $1',
+        [submissionId]
+      )
+      const files = result.rows
+
+      // Delete physical files
+      files.forEach(file => {
+        const absolutePath = path.resolve(file.stored_path)
+        if (fs.existsSync(absolutePath)) {
+          try {
+            fs.unlinkSync(absolutePath)
+          } catch (unlinkErr) {
+            console.error('Failed to delete file:', absolutePath, unlinkErr)
+          }
+        }
+      })
+
+      // Delete from database (files will be deleted due to foreign key constraint)
+      const deleteResult = await pool.query(
+        'DELETE FROM submissions WHERE id = $1',
+        [submissionId]
+      )
+
+      if (deleteResult.rowCount === 0) {
+        return res.status(404).json({ error: 'Submission not found' })
+      }
+
+      return res.json({ success: true, deletedId: submissionId })
+    }
+
+    // --- Otherwise, clear all submissions ---
     // Get all files to delete from disk
     const result = await pool.query('SELECT stored_path FROM files')
     const files = result.rows
@@ -227,10 +199,35 @@ app.delete('/api/submissions', async (req, res) => {
 
     res.json({ success: true, message: 'All submissions cleared' })
   } catch (error) {
-    console.error('Error clearing submissions:', error)
-    res.status(500).json({ error: 'Failed to clear submissions' })
+    console.error('Error deleting submission(s):', error)
+    res.status(500).json({ error: 'Failed to delete submission(s)' })
   }
 })
+
+// Update a specific submission's data_json
+app.put('/api/submissions', async (req, res) => {
+  try {
+    const submissionId = req.query?.id || req.body?.id;
+    if (!submissionId) return res.status(400).json({ error: 'Missing logic ID' });
+    const updateBody = req.body || {}
+
+    const checkResult = await pool.query('SELECT id FROM submissions WHERE id = $1', [submissionId])
+    if (checkResult.rowCount === 0) {
+      return res.status(404).json({ error: 'Submission not found' })
+    }
+
+    await pool.query(
+      'UPDATE submissions SET data_json = $1 WHERE id = $2',
+      [JSON.stringify(updateBody), submissionId]
+    )
+
+    res.json({ success: true, updatedId: submissionId })
+  } catch (error) {
+    console.error('Error updating submission:', error)
+    res.status(500).json({ error: 'Failed to update submission' })
+  }
+})
+
 
 // Save submission - handle many possible files
 const fileFields = [
