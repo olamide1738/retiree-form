@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import LoginForm from './LoginForm'
 import Modal from './Modal'
 
@@ -40,6 +40,8 @@ export default function Dashboard() {
   const [sortBy, setSortBy] = useState('dateDesc')
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const [confirmClearAll, setConfirmClearAll] = useState(false)
+  const fileInputRef = useRef(null)
+  const [restoreFile, setRestoreFile] = useState(null)
 
   const loadSubmissions = async () => {
     try {
@@ -139,6 +141,45 @@ export default function Dashboard() {
 
   const clearAllSubmissions = () => {
     setConfirmClearAll(true)
+  }
+
+  const handleRestoreClick = () => {
+    if (fileInputRef.current) fileInputRef.current.click()
+  }
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (file) setRestoreFile(file)
+    e.target.value = ''
+  }
+
+  const confirmRestore = () => {
+    if (!restoreFile) return
+    setLoading(true)
+    const reader = new FileReader()
+    reader.onload = async (e) => {
+      try {
+        const payload = JSON.parse(e.target.result)
+        const res = await fetch('/api/submissions/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}))
+          throw new Error(errData.error || 'Failed to restore data')
+        }
+        await loadSubmissions()
+        setRestoreFile(null)
+        showModal('success', 'Restore Successful', 'The database has been successfully restored from the backup.')
+      } catch (err) {
+        setRestoreFile(null)
+        showModal('error', 'Restore Failed', err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    reader.readAsText(restoreFile)
   }
 
   // Show login form if not authenticated
@@ -287,6 +328,52 @@ export default function Dashboard() {
             <option value="alphabetical">Alphabetical (A-Z)</option>
             <option value="id">By ID (Sequential)</option>
           </select>
+          <button
+            onClick={handleRestoreClick}
+            style={{
+              backgroundColor: '#6366f1',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: '500'
+            }}
+          >
+            ⬆️ Restore Backup
+          </button>
+          <input
+            type="file"
+            accept=".json"
+            style={{ display: 'none' }}
+            ref={fileInputRef}
+            onChange={handleFileChange}
+          />
+          <a
+            href="/api/submissions/backup"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: '500'
+            }}
+          >
+            💾 Download Backup
+          </a>
           <a
             href="/api/submissions/export"
             target="_blank"
@@ -785,8 +872,32 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Restore Backup Modal */}
+      {restoreFile && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050, padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '400px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.15)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⚠️</div>
+            <h3 style={{ marginTop: 0, color: '#dc2626', marginBottom: '10px' }}>Confirm Restore</h3>
+            <p style={{ color: 'var(--text)', marginBottom: '25px', lineHeight: '1.5' }}>
+              Are you sure you want to restore from <strong>{restoreFile.name}</strong>?<br /><br />This will permanently wipe all current data and replace it entirely with the backup contents!
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  setRestoreFile(null)
+                  if (fileInputRef.current) fileInputRef.current.value = ''
+                }}
+                style={{ padding: '8px 20px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: 'pointer', fontWeight: '500' }}
+              >Cancel</button>
+              <button
+                onClick={confirmRestore}
+                style={{ padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+              >Overwrite Database</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
-
