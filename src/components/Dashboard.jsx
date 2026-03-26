@@ -80,7 +80,7 @@ export default function Dashboard() {
     // For now, we'll use a simple approach - in a real app you'd want a confirmation modal
     if (window.confirm('Are you sure you want to delete this submission? This action cannot be undone.')) {
       try {
-        const res = await fetch(`/api/submissions/${id}`, {
+        const res = await fetch(`/api/submissions?id=${id}`, {
           method: 'DELETE'
         })
         if (!res.ok) throw new Error('Failed to delete submission')
@@ -106,7 +106,7 @@ export default function Dashboard() {
 
   const saveEdit = async () => {
     try {
-      const res = await fetch(`/api/submissions/${editingId}`, {
+      const res = await fetch(`/api/submissions?id=${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editData)

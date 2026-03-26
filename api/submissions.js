@@ -82,10 +82,16 @@ export default async function handler(req, res) {
       res.status(201).json({ id: submissionId })
 
     } else if (req.method === 'PUT') {
-      const pathname = req.url || '';
+      let submissionId = req.query?.id || (req.body && req.body.id);
+      if (!submissionId && req.url) {
+        const match = req.url.match(/[?&]id=([^&]+)/);
+        if (match) submissionId = match[1];
+        else if (req.url.includes('/submissions/') && req.url.split('/').length > 3) {
+          submissionId = req.url.split('/').pop();
+        }
+      }
 
-      if (pathname.includes('/submissions/') && pathname.split('/').length > 3) {
-        const submissionId = pathname.split('/').pop()
+      if (submissionId) {
         const updateBody = req.body || {}
 
         const checkResult = await client.query('SELECT id FROM submissions WHERE id = $1', [submissionId])
