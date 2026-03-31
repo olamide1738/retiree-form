@@ -1,7 +1,12 @@
 import { useState } from 'react'
 
-export default function FileInput({ name, accept, multiple, required, onChange }) {
+export default function FileInput({ name, accept, multiple, required, onChange, value }) {
   const [selectedFiles, setSelectedFiles] = useState([])
+
+  // Use the value from props if available (it can be a single File, an array of Files, or null)
+  const effectiveFiles = value 
+    ? (Array.isArray(value) ? value : [value])
+    : selectedFiles
 
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files || [])
@@ -33,18 +38,18 @@ export default function FileInput({ name, accept, multiple, required, onChange }
   }
 
   const getDisplayText = () => {
-    if (selectedFiles.length === 0) {
+    if (effectiveFiles.length === 0) {
       return 'No file selected.'
     }
     
     if (multiple) {
-      if (selectedFiles.length === 1) {
-        return truncateFileName(selectedFiles[0].name)
+      if (effectiveFiles.length === 1) {
+        return truncateFileName(effectiveFiles[0].name)
       } else {
-        return `${selectedFiles.length} files selected`
+        return `${effectiveFiles.length} files selected`
       }
     } else {
-      return truncateFileName(selectedFiles[0].name)
+      return truncateFileName(effectiveFiles[0].name)
     }
   }
 
@@ -56,7 +61,7 @@ export default function FileInput({ name, accept, multiple, required, onChange }
         accept={accept}
         multiple={multiple}
         onChange={handleFileChange}
-        required={required}
+        required={required && effectiveFiles.length === 0}
         className="file-input-hidden"
         id={`file-input-${name}`}
       />

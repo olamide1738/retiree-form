@@ -437,6 +437,7 @@ function App() {
               <div className="form-section">
                 <VerificationDocumentsSection
                   values={verificationDocs}
+                  files={verificationFiles}
                   onChange={handleVerificationChange}
                   onFileChange={handleVerificationFileChange}
                 />

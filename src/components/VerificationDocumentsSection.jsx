@@ -1,6 +1,6 @@
 import FileInput from './FileInput'
 
-export default function VerificationDocumentsSection({ values, onFileChange, onChange }) {
+export default function VerificationDocumentsSection({ values, files, onFileChange, onChange }) {
   return (
     <fieldset className="section">
       <legend>Verification Documents</legend>
@@ -11,6 +11,7 @@ export default function VerificationDocumentsSection({ values, onFileChange, onC
           <FileInput
             name="retirementLetter"
             accept=".pdf,.jpg,.jpeg,.png"
+            value={files?.retirementLetter}
             onChange={onFileChange}
             required
           />
@@ -21,6 +22,7 @@ export default function VerificationDocumentsSection({ values, onFileChange, onC
           <FileInput
             name="birthCertOrId"
             accept=".pdf,.jpg,.jpeg,.png"
+            value={files?.birthCertOrId}
             onChange={onFileChange}
             required
           />
@@ -31,6 +33,7 @@ export default function VerificationDocumentsSection({ values, onFileChange, onC
           <FileInput
             name="passportPhoto"
             accept="image/*"
+            value={files?.passportPhoto}
             onChange={onFileChange}
             required
           />
@@ -41,6 +44,7 @@ export default function VerificationDocumentsSection({ values, onFileChange, onC
           <FileInput
             name="otherDocuments"
             multiple
+            value={files?.otherDocuments}
             onChange={onFileChange}
           />
         </label>
