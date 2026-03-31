@@ -168,7 +168,7 @@ const fileFields = [
   { name: 'witnessSignature', maxCount: 1 },
 ]
 
-app.post('/api/submissions', upload.fields(fileFields), (req, res) => {
+app.post('/api/upload', upload.fields(fileFields), (req, res) => {
   // Extract text fields
   const body = req.body || {}
   const createdAt = new Date().toISOString()

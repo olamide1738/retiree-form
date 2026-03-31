@@ -313,7 +313,7 @@ const fileFields = [
   { name: 'witnessSignature', maxCount: 1 },
 ]
 
-app.post('/api/submissions', upload.fields(fileFields), async (req, res) => {
+app.post('/api/upload', upload.fields(fileFields), async (req, res) => {
   try {
     const body = req.body || {}
     const createdAt = new Date().toISOString()
