@@ -52,6 +52,15 @@ export default function Dashboard() {
   const [confirmRestoreMerged, setConfirmRestoreMerged] = useState(false)
   const mergeFileInputRef = useRef(null)
 
+  // Restore Progress and Error state
+  const [restoreProgress, setRestoreProgress] = useState({
+    active: false,
+    percent: 0,
+    stage: '',
+    detail: '',
+    error: null
+  })
+
   // Loading states for actions
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -180,11 +189,45 @@ export default function Dashboard() {
 
   const confirmRestore = () => {
     if (!restoreFile) return
-    setIsRestoring(true)
+    const fileToRestore = restoreFile
+    setRestoreFile(null)
+
+    setRestoreProgress({
+      active: true,
+      percent: 15,
+      stage: 'Reading Backup File',
+      detail: `Reading "${fileToRestore.name}" (${(fileToRestore.size / 1024).toFixed(1)} KB)...`,
+      error: null
+    })
+
     const reader = new FileReader()
+
+    reader.onerror = () => {
+      setRestoreProgress(prev => ({
+        ...prev,
+        percent: 100,
+        stage: 'Read Failed',
+        detail: 'Failed to read file from disk. The file may be corrupt or inaccessible.',
+        error: 'Failed to read file from disk.'
+      }))
+    }
+
     reader.onload = async (e) => {
       try {
-        const parsed = JSON.parse(e.target.result)
+        setRestoreProgress(prev => ({
+          ...prev,
+          percent: 35,
+          stage: 'Validating & Parsing Data',
+          detail: 'Parsing JSON structure and validating records...'
+        }))
+
+        let parsed
+        try {
+          parsed = JSON.parse(e.target.result)
+        } catch (jsonErr) {
+          throw new Error(`Invalid JSON syntax in backup file: ${jsonErr.message}`)
+        }
+
         let submissions = []
         let files = []
 
@@ -193,6 +236,12 @@ export default function Dashboard() {
         } else if (parsed && typeof parsed === 'object') {
           submissions = Array.isArray(parsed.submissions) ? parsed.submissions : []
           files = Array.isArray(parsed.files) ? parsed.files : []
+        } else {
+          throw new Error('Unrecognized backup format: File does not contain valid submissions.')
+        }
+
+        if (submissions.length === 0 && files.length === 0) {
+          throw new Error('Backup file contains 0 submissions and 0 files.')
         }
 
         const normalizedSubmissions = submissions.map((sub, index) => ({
@@ -210,26 +259,72 @@ export default function Dashboard() {
           files: files
         }
 
+        const payloadString = JSON.stringify(payload)
+        const payloadSizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(2)
+
+        setRestoreProgress(prev => ({
+          ...prev,
+          percent: 65,
+          stage: 'Restoring Database Records',
+          detail: `Transmitting ${normalizedSubmissions.length} submissions and ${files.length} attached documents (${payloadSizeMB} MB)...`
+        }))
+
         const res = await fetch('/api/submissions/restore', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: payloadString
         })
+
         if (!res.ok) {
-          const errData = await res.json().catch(() => ({}))
-          throw new Error(errData.error || errData.details || 'Failed to restore data')
+          let errorMsg = `Server error ${res.status}: ${res.statusText}`
+          try {
+            const errData = await res.json()
+            if (errData.error || errData.details) {
+              errorMsg = `${errData.error || 'Restore failed'}${errData.details ? `: ${errData.details}` : ''}`
+            }
+          } catch (parseErr) {
+            if (res.status === 413) {
+              errorMsg = `Backup payload is too large (${payloadSizeMB} MB) for the serverless function limit.`
+            } else if (res.status === 504) {
+              errorMsg = 'Database connection timed out during restore.'
+            }
+          }
+          throw new Error(errorMsg)
         }
+
+        setRestoreProgress(prev => ({
+          ...prev,
+          percent: 90,
+          stage: 'Refreshing Dashboard View',
+          detail: 'Database restore committed. Reloading live records...'
+        }))
+
         await loadSubmissions(false) // Reload silently
-        setRestoreFile(null)
-        showModal('success', 'Restore Successful', `The database has been successfully restored (${normalizedSubmissions.length} submissions restored).`)
+
+        setRestoreProgress(prev => ({
+          ...prev,
+          percent: 100,
+          stage: 'Restore Completed Successfully!',
+          detail: `Successfully restored ${normalizedSubmissions.length} submissions and ${files.length} attached files into the database.`,
+          error: null
+        }))
+
+        setTimeout(() => {
+          setRestoreProgress(prev => prev.error ? prev : { ...prev, active: false })
+          showModal('success', 'Restore Successful', `The database has been successfully restored (${normalizedSubmissions.length} submissions restored).`)
+        }, 1200)
+
       } catch (err) {
-        setRestoreFile(null)
-        showModal('error', 'Restore Failed', err.message)
-      } finally {
-        setIsRestoring(false)
+        setRestoreProgress(prev => ({
+          ...prev,
+          percent: 100,
+          stage: 'Restore Failed',
+          detail: err.message,
+          error: err.message
+        }))
       }
     }
-    reader.readAsText(restoreFile)
+    reader.readAsText(fileToRestore)
   }
 
   const handleMergeFilesSelect = (e) => {
@@ -391,39 +486,91 @@ export default function Dashboard() {
   }
 
   const executeRestoreMerged = async () => {
-    setIsRestoringMerged(true)
+    setConfirmRestoreMerged(false)
+    setMergeModalOpen(false)
+
+    setRestoreProgress({
+      active: true,
+      percent: 20,
+      stage: 'Preparing Merged Dataset',
+      detail: 'Consolidating and validating backup files...',
+      error: null
+    })
+
     try {
       const merged = computeMergedData(mergeFiles, deduplicateMerge)
       if (merged.submissions.length === 0) {
-        showModal('error', 'Restore Failed', 'No valid submissions to restore.')
-        return
+        throw new Error('No valid submissions found to restore across selected files.')
       }
+
+      const payloadString = JSON.stringify(merged)
+      const payloadSizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(2)
+
+      setRestoreProgress(prev => ({
+        ...prev,
+        percent: 60,
+        stage: 'Restoring Database Records',
+        detail: `Transmitting ${merged.submissions.length} merged submissions and ${merged.files.length} attached documents (${payloadSizeMB} MB)...`
+      }))
 
       const res = await fetch('/api/submissions/restore', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(merged)
+        body: payloadString
       })
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || 'Failed to restore merged data')
+        let errorMsg = `Server error ${res.status}: ${res.statusText}`
+        try {
+          const errData = await res.json()
+          if (errData.error || errData.details) {
+            errorMsg = `${errData.error || 'Restore failed'}${errData.details ? `: ${errData.details}` : ''}`
+          }
+        } catch (parseErr) {
+          if (res.status === 413) {
+            errorMsg = `Merged backup payload is too large (${payloadSizeMB} MB) for the serverless limit.`
+          } else if (res.status === 504) {
+            errorMsg = 'Database connection timed out during restore.'
+          }
+        }
+        throw new Error(errorMsg)
       }
 
+      setRestoreProgress(prev => ({
+        ...prev,
+        percent: 90,
+        stage: 'Refreshing Dashboard View',
+        detail: 'Database restore committed. Updating submissions view...'
+      }))
+
       await loadSubmissions(false)
-      setConfirmRestoreMerged(false)
-      setMergeModalOpen(false)
       clearMergeFiles()
-      showModal(
-        'success',
-        'Database Restored with Merged Data!',
-        `Successfully restored ${merged.submissions.length} submissions and ${merged.files.length} attached files into the database.`
-      )
+
+      setRestoreProgress(prev => ({
+        ...prev,
+        percent: 100,
+        stage: 'Merged Restore Completed!',
+        detail: `Successfully restored ${merged.submissions.length} submissions and ${merged.files.length} attached files into the database.`,
+        error: null
+      }))
+
+      setTimeout(() => {
+        setRestoreProgress(prev => prev.error ? prev : { ...prev, active: false })
+        showModal(
+          'success',
+          'Database Restored with Merged Data!',
+          `Successfully restored ${merged.submissions.length} submissions and ${merged.files.length} attached files into the database.`
+        )
+      }, 1200)
+
     } catch (err) {
-      setConfirmRestoreMerged(false)
-      showModal('error', 'Restore Failed', err.message)
-    } finally {
-      setIsRestoringMerged(false)
+      setRestoreProgress(prev => ({
+        ...prev,
+        percent: 100,
+        stage: 'Restore Failed',
+        detail: err.message,
+        error: err.message
+      }))
     }
   }
 
@@ -1403,6 +1550,160 @@ export default function Dashboard() {
                 style={{ opacity: isRestoringMerged ? 0.8 : 1, padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: isRestoringMerged ? 'not-allowed' : 'pointer', fontWeight: '600' }}
               >{isRestoringMerged ? 'Restoring...' : 'Yes, Overwrite & Restore'}</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restore Progress & Error Alert Modal */}
+      {restoreProgress.active && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0,0,0,0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1200,
+          padding: '20px',
+          backdropFilter: 'blur(3px)'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '28px',
+            width: '100%',
+            maxWidth: '520px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '18px',
+            border: restoreProgress.error ? '2px solid #ef4444' : '1px solid #e2e8f0'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: restoreProgress.error ? '#fef2f2' : (restoreProgress.percent === 100 ? '#ecfdf5' : '#eff6ff'),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.6rem',
+                flexShrink: 0
+              }}>
+                {restoreProgress.error ? '⚠️' : (restoreProgress.percent === 100 ? '✅' : '⏳')}
+              </div>
+              <div style={{ flex: 1, overflow: 'hidden' }}>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: '1.25rem',
+                  color: restoreProgress.error ? '#dc2626' : 'var(--brand-brown)',
+                  fontWeight: '700'
+                }}>
+                  {restoreProgress.error ? 'Restore Problem Encountered' : restoreProgress.stage}
+                </h3>
+                <div style={{
+                  color: '#64748b',
+                  fontSize: '0.85rem',
+                  marginTop: '3px'
+                }}>
+                  {restoreProgress.error ? 'An error interrupted the database restore process.' : `Status: ${restoreProgress.percent}% completed`}
+                </div>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            <div style={{
+              width: '100%',
+              backgroundColor: '#f1f5f9',
+              height: '10px',
+              borderRadius: '5px',
+              overflow: 'hidden'
+            }}>
+              <div style={{
+                height: '100%',
+                width: `${restoreProgress.percent}%`,
+                backgroundColor: restoreProgress.error ? '#ef4444' : (restoreProgress.percent === 100 ? '#10b981' : '#8b5cf6'),
+                transition: 'width 0.4s ease-in-out',
+                borderRadius: '5px'
+              }}></div>
+            </div>
+
+            {/* Detail message or Error Box */}
+            {restoreProgress.error ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: '8px',
+                  padding: '14px 16px',
+                  color: '#991b1b',
+                  fontSize: '0.9rem',
+                  lineHeight: '1.45',
+                  wordBreak: 'break-word',
+                  fontFamily: 'monospace'
+                }}>
+                  <strong>Error details:</strong><br />
+                  {restoreProgress.detail}
+                </div>
+
+                <div style={{
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                  fontSize: '0.8rem',
+                  color: '#475569',
+                  lineHeight: '1.4'
+                }}>
+                  <strong style={{ color: '#1e293b' }}>Troubleshooting Suggestions:</strong>
+                  <ul style={{ margin: '6px 0 0 16px', padding: 0 }}>
+                    <li>Ensure the uploaded JSON file is a valid backup created by this system.</li>
+                    <li>If the backup contains very large base64 attachments, serverless payload limits (4.5 MB) may be exceeded.</li>
+                    <li>Verify your database connection in your environment settings.</li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div style={{
+                backgroundColor: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '12px 14px',
+                fontSize: '0.85rem',
+                color: '#334155',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '1.1rem' }}>ℹ️</span>
+                <span>{restoreProgress.detail}</span>
+              </div>
+            )}
+
+            {/* Action buttons on error */}
+            {restoreProgress.error && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '6px' }}>
+                <button
+                  onClick={() => setRestoreProgress(prev => ({ ...prev, active: false, error: null }))}
+                  style={{
+                    backgroundColor: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    padding: '9px 20px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#b91c1c'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#dc2626'}
+                >
+                  Dismiss Alert
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
