@@ -43,6 +43,15 @@ export default function Dashboard() {
   const fileInputRef = useRef(null)
   const [restoreFile, setRestoreFile] = useState(null)
 
+  // Merge Backups state
+  const [mergeModalOpen, setMergeModalOpen] = useState(false)
+  const [mergeFiles, setMergeFiles] = useState([])
+  const [deduplicateMerge, setDeduplicateMerge] = useState(false)
+  const [isMerging, setIsMerging] = useState(false)
+  const [isRestoringMerged, setIsRestoringMerged] = useState(false)
+  const [confirmRestoreMerged, setConfirmRestoreMerged] = useState(false)
+  const mergeFileInputRef = useRef(null)
+
   // Loading states for actions
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -198,6 +207,201 @@ export default function Dashboard() {
     reader.readAsText(restoreFile)
   }
 
+  const handleMergeFilesSelect = (e) => {
+    const selectedFiles = Array.from(e.target.files || [])
+    if (selectedFiles.length === 0) return
+
+    selectedFiles.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result)
+          let submissions = []
+          let files = []
+
+          if (Array.isArray(parsed)) {
+            submissions = parsed
+          } else if (parsed && typeof parsed === 'object') {
+            submissions = Array.isArray(parsed.submissions) ? parsed.submissions : []
+            files = Array.isArray(parsed.files) ? parsed.files : []
+          }
+
+          setMergeFiles(prev => {
+            const exists = prev.some(f => f.name === file.name && f.size === file.size)
+            if (exists) return prev
+            return [
+              ...prev,
+              {
+                id: `${file.name}-${file.size}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+                name: file.name,
+                size: file.size,
+                submissions,
+                files,
+                timestamp: parsed.timestamp || null,
+                version: parsed.version || '1.0'
+              }
+            ]
+          })
+        } catch (err) {
+          setMergeFiles(prev => [
+            ...prev,
+            {
+              id: `${file.name}-${file.size}-${Date.now()}`,
+              name: file.name,
+              size: file.size,
+              error: 'Invalid JSON backup file: ' + err.message
+            }
+          ])
+        }
+      }
+      reader.readAsText(file)
+    })
+
+    e.target.value = ''
+  }
+
+  const removeMergeFile = (id) => {
+    setMergeFiles(prev => prev.filter(f => f.id !== id))
+  }
+
+  const clearMergeFiles = () => {
+    setMergeFiles([])
+  }
+
+  const computeMergedData = (filesList, deduplicate = false) => {
+    const validFiles = filesList.filter(f => !f.error && Array.isArray(f.submissions))
+    const mergedSubmissions = []
+    const mergedFiles = []
+    let subCounter = 1
+    let fileCounter = 1
+    const seenSubmissions = new Set()
+
+    validFiles.forEach(fileObj => {
+      const idMap = new Map()
+
+      fileObj.submissions.forEach(sub => {
+        let subData = sub.data_json
+        if (typeof subData === 'string') {
+          try { subData = JSON.parse(subData) } catch (e) { }
+        }
+
+        if (deduplicate && subData && typeof subData === 'object') {
+          const dedupeKey = `${(subData.fullName || '').toLowerCase().trim()}_${(subData.phoneNumber || subData.pensionNumber || subData.emailAddress || '').trim()}`
+          if (dedupeKey && dedupeKey !== '_' && seenSubmissions.has(dedupeKey)) {
+            return
+          }
+          if (dedupeKey && dedupeKey !== '_') {
+            seenSubmissions.add(dedupeKey)
+          }
+        }
+
+        const newSubId = subCounter++
+        idMap.set(sub.id, newSubId)
+
+        mergedSubmissions.push({
+          id: newSubId,
+          created_at: sub.created_at || new Date().toISOString(),
+          data_json: typeof sub.data_json === 'string' ? sub.data_json : JSON.stringify(sub.data_json)
+        })
+      })
+
+      if (Array.isArray(fileObj.files)) {
+        fileObj.files.forEach(f => {
+          const mappedSubId = idMap.get(f.submission_id)
+          if (mappedSubId) {
+            const newFileId = fileCounter++
+            mergedFiles.push({
+              id: newFileId,
+              submission_id: mappedSubId,
+              field_name: f.field_name,
+              original_name: f.original_name,
+              stored_path: f.stored_path
+            })
+          }
+        })
+      }
+    })
+
+    return {
+      version: '1.0',
+      timestamp: new Date().toISOString(),
+      merged_sources_count: validFiles.length,
+      source_files: validFiles.map(f => f.name),
+      submissions: mergedSubmissions,
+      files: mergedFiles
+    }
+  }
+
+  const downloadMergedBackup = () => {
+    setIsMerging(true)
+    try {
+      const merged = computeMergedData(mergeFiles, deduplicateMerge)
+      if (merged.submissions.length === 0) {
+        showModal('error', 'Merge Failed', 'No valid submissions found to merge.')
+        return
+      }
+
+      const jsonStr = JSON.stringify(merged, null, 2)
+      const blob = new Blob([jsonStr], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const dateStr = new Date().toISOString().slice(0, 10)
+      a.download = `retiree-db-backup-merged-${dateStr}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      showModal(
+        'success',
+        'Merged Backup Created!',
+        `Successfully merged ${mergeFiles.filter(f => !f.error).length} backup files into 1 backup containing ${merged.submissions.length} submissions and ${merged.files.length} attached documents.`
+      )
+    } catch (err) {
+      showModal('error', 'Merge Failed', err.message)
+    } finally {
+      setIsMerging(false)
+    }
+  }
+
+  const executeRestoreMerged = async () => {
+    setIsRestoringMerged(true)
+    try {
+      const merged = computeMergedData(mergeFiles, deduplicateMerge)
+      if (merged.submissions.length === 0) {
+        showModal('error', 'Restore Failed', 'No valid submissions to restore.')
+        return
+      }
+
+      const res = await fetch('/api/submissions/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(merged)
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'Failed to restore merged data')
+      }
+
+      await loadSubmissions(false)
+      setConfirmRestoreMerged(false)
+      setMergeModalOpen(false)
+      clearMergeFiles()
+      showModal(
+        'success',
+        'Database Restored with Merged Data!',
+        `Successfully restored ${merged.submissions.length} submissions and ${merged.files.length} attached files into the database.`
+      )
+    } catch (err) {
+      setConfirmRestoreMerged(false)
+      showModal('error', 'Restore Failed', err.message)
+    } finally {
+      setIsRestoringMerged(false)
+    }
+  }
+
   // Show login form if not authenticated
   if (!isAuthenticated) {
     return <LoginForm onLogin={handleLogin} />
@@ -351,6 +555,34 @@ export default function Dashboard() {
             style={{ display: 'none' }}
             ref={fileInputRef}
             onChange={handleFileChange}
+          />
+          <button
+            onClick={() => setMergeModalOpen(true)}
+            style={{
+              backgroundColor: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: '500'
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = '#7c3aed'}
+            onMouseOut={(e) => e.target.style.backgroundColor = '#8b5cf6'}
+          >
+            🔀 Merge Backups
+          </button>
+          <input
+            type="file"
+            accept=".json"
+            multiple
+            style={{ display: 'none' }}
+            ref={mergeFileInputRef}
+            onChange={handleMergeFilesSelect}
           />
           <a
             href="/api/submissions/backup"
@@ -916,6 +1148,235 @@ export default function Dashboard() {
                 disabled={isRestoring}
                 style={{ opacity: isRestoring ? 0.8 : 1, padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: isRestoring ? 'not-allowed' : 'pointer', fontWeight: '600' }}
               >{isRestoring ? 'Restoring Database...' : 'Overwrite Database'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Merge Backups Modal */}
+      {mergeModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1050, padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.5rem' }}>🔀</span>
+                <h3 style={{ margin: 0, color: 'var(--brand-brown)', fontSize: '1.25rem' }}>Merge JSON Backups</h3>
+              </div>
+              <button
+                onClick={() => setMergeModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: '#64748b' }}
+              >✕</button>
+            </div>
+
+            <p style={{ margin: 0, color: 'var(--muted)', fontSize: '0.9rem', lineHeight: '1.4' }}>
+              Combine multiple backup files (.json) into a single consolidated backup. Submissions and their document attachments will have their identifiers cleanly remapped without conflicts.
+            </p>
+
+            {/* Drop Zone / File Picker Trigger */}
+            <div
+              onClick={() => mergeFileInputRef.current && mergeFileInputRef.current.click()}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                  handleMergeFilesSelect({ target: { files: e.dataTransfer.files } });
+                }
+              }}
+              style={{
+                border: '2px dashed #8b5cf6',
+                borderRadius: '8px',
+                padding: '24px 16px',
+                textAlign: 'center',
+                backgroundColor: '#f5f3ff',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s'
+              }}
+            >
+              <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📂</div>
+              <div style={{ fontWeight: '600', color: '#6d28d9', marginBottom: '4px' }}>
+                Click to select JSON backup files or drag & drop them here
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+                Select 2 or more .json backup files (multiple selection supported)
+              </div>
+            </div>
+
+            {/* Selected files list */}
+            {mergeFiles.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--brand-brown)' }}>
+                    Selected Backup Files ({mergeFiles.length})
+                  </span>
+                  <button
+                    onClick={clearMergeFiles}
+                    style={{ background: 'transparent', border: 'none', color: '#dc2626', fontSize: '0.8rem', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Remove All
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {mergeFiles.map(file => (
+                    <div key={file.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '10px 12px',
+                      backgroundColor: file.error ? '#fef2f2' : '#f8fafc',
+                      border: file.error ? '1px solid #fecaca' : '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      fontSize: '0.85rem'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden', marginRight: '8px' }}>
+                        <div style={{ fontWeight: '600', color: file.error ? '#dc2626' : '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {file.name}
+                        </div>
+                        <div style={{ color: '#64748b', fontSize: '0.75rem' }}>
+                          {(file.size / 1024).toFixed(1)} KB {file.error ? `• ${file.error}` : `• ${file.submissions?.length || 0} submissions • ${file.files?.length || 0} files`}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => removeMergeFile(file.id)}
+                        style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1rem', padding: '0 4px' }}
+                        title="Remove file"
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Summary Box */}
+                {(() => {
+                  const preview = computeMergedData(mergeFiles, deduplicateMerge)
+                  return (
+                    <div style={{
+                      backgroundColor: '#ecfdf5',
+                      border: '1px solid #a7f3d0',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      marginTop: '4px',
+                      display: 'flex',
+                      justifyContent: 'space-around',
+                      alignItems: 'center',
+                      textAlign: 'center'
+                    }}>
+                      <div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#065f46' }}>
+                          {mergeFiles.filter(f => !f.error).length}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#047857' }}>Valid Backups</div>
+                      </div>
+                      <div style={{ width: '1px', height: '30px', backgroundColor: '#a7f3d0' }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#065f46' }}>
+                          {preview.submissions.length}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#047857' }}>Total Submissions</div>
+                      </div>
+                      <div style={{ width: '1px', height: '30px', backgroundColor: '#a7f3d0' }}></div>
+                      <div>
+                        <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#065f46' }}>
+                          {preview.files.length}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#047857' }}>Attached Files</div>
+                      </div>
+                    </div>
+                  )
+                })()}
+
+                {/* Merge Options */}
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text)' }}>
+                  <input
+                    type="checkbox"
+                    checked={deduplicateMerge}
+                    onChange={(e) => setDeduplicateMerge(e.target.checked)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                  <span>Deduplicate matching submissions (identifies duplicate full name & contact details)</span>
+                </label>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '8px', flexWrap: 'wrap', gap: '10px' }}>
+              <button
+                onClick={() => setMergeModalOpen(false)}
+                style={{ padding: '8px 16px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: 'pointer', fontWeight: '500', fontSize: '14px' }}
+              >
+                Close
+              </button>
+
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={downloadMergedBackup}
+                  disabled={isMerging || mergeFiles.filter(f => !f.error).length === 0}
+                  style={{
+                    backgroundColor: '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    cursor: (isMerging || mergeFiles.filter(f => !f.error).length === 0) ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    opacity: (isMerging || mergeFiles.filter(f => !f.error).length === 0) ? 0.6 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>📥</span>
+                  <span>{isMerging ? 'Merging...' : 'Download Merged Backup'}</span>
+                </button>
+
+                <button
+                  onClick={() => setConfirmRestoreMerged(true)}
+                  disabled={isRestoringMerged || mergeFiles.filter(f => !f.error).length === 0}
+                  style={{
+                    backgroundColor: '#8b5cf6',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    cursor: (isRestoringMerged || mergeFiles.filter(f => !f.error).length === 0) ? 'not-allowed' : 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    opacity: (isRestoringMerged || mergeFiles.filter(f => !f.error).length === 0) ? 0.6 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <span>🚀</span>
+                  <span>Restore Directly to DB</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Restore Merged Modal */}
+      {confirmRestoreMerged && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '20px' }}>
+          <div style={{ backgroundColor: 'white', padding: '24px', borderRadius: '12px', width: '100%', maxWidth: '420px', textAlign: 'center', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '10px' }}>⚠️</div>
+            <h3 style={{ marginTop: 0, color: '#dc2626', marginBottom: '10px' }}>Confirm Database Overwrite</h3>
+            <p style={{ color: 'var(--text)', marginBottom: '20px', lineHeight: '1.5', fontSize: '0.9rem' }}>
+              Restoring this merged backup will <strong>replace all existing database records</strong> with the merged content from <strong>{mergeFiles.filter(f => !f.error).length} backup files</strong>.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+              <button
+                onClick={() => setConfirmRestoreMerged(false)}
+                disabled={isRestoringMerged}
+                style={{ opacity: isRestoringMerged ? 0.7 : 1, padding: '8px 20px', border: '1px solid #cbd5e1', borderRadius: '6px', background: 'transparent', cursor: isRestoringMerged ? 'not-allowed' : 'pointer', fontWeight: '500' }}
+              >Cancel</button>
+              <button
+                onClick={executeRestoreMerged}
+                disabled={isRestoringMerged}
+                style={{ opacity: isRestoringMerged ? 0.8 : 1, padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '6px', cursor: isRestoringMerged ? 'not-allowed' : 'pointer', fontWeight: '600' }}
+              >{isRestoringMerged ? 'Restoring...' : 'Yes, Overwrite & Restore'}</button>
             </div>
           </div>
         </div>
