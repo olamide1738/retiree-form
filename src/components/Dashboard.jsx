@@ -187,6 +187,169 @@ export default function Dashboard() {
     e.target.value = ''
   }
 
+  const performChunkedRestore = async (submissions, files) => {
+    // Stage 1: Initialize
+    setRestoreProgress({
+      active: true,
+      percent: 10,
+      stage: 'Initializing Database',
+      detail: 'Preparing database and resetting existing tables...',
+      error: null
+    })
+
+    const initRes = await fetch('/api/submissions/restore?action=init', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'init' })
+    })
+
+    if (!initRes.ok) {
+      const errData = await initRes.json().catch(() => ({}))
+      throw new Error(errData.error || errData.details || `Failed to initialize database (status ${initRes.status})`)
+    }
+
+    // Stage 2: Restore Submissions in batches of 50
+    const SUBMISSION_BATCH_SIZE = 50
+    const totalSubmissions = submissions.length
+    let restoredSubmissions = 0
+
+    if (totalSubmissions > 0) {
+      for (let i = 0; i < totalSubmissions; i += SUBMISSION_BATCH_SIZE) {
+        const batch = submissions.slice(i, i + SUBMISSION_BATCH_SIZE)
+        const percent = Math.round(10 + ((i / totalSubmissions) * 20)) // 10% -> 30%
+
+        setRestoreProgress(prev => ({
+          ...prev,
+          percent,
+          stage: 'Restoring Submissions',
+          detail: `Restoring submissions ${i + 1} to ${Math.min(i + batch.length, totalSubmissions)} of ${totalSubmissions}...`
+        }))
+
+        const subRes = await fetch('/api/submissions/restore?action=submissions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'submissions', submissions: batch })
+        })
+
+        if (!subRes.ok) {
+          const errData = await subRes.json().catch(() => ({}))
+          throw new Error(errData.error || errData.details || `Failed restoring submissions batch (status ${subRes.status})`)
+        }
+
+        restoredSubmissions += batch.length
+      }
+    }
+
+    // Stage 3: Restore Files in chunks (keeping each chunk payload < 1.2 MB to stay safely below Vercel's 4.5MB limit)
+    const totalFiles = files.length
+    let restoredFiles = 0
+
+    if (totalFiles > 0) {
+      let currentChunk = []
+      let currentChunkBytes = 0
+      const MAX_CHUNK_BYTES = 1.2 * 1024 * 1024 // 1.2 MB limit per request
+
+      for (let i = 0; i < totalFiles; i++) {
+        const fileObj = files[i]
+        const fileApproxBytes = (fileObj.stored_path ? fileObj.stored_path.length : 0)
+
+        if (currentChunk.length > 0 && (currentChunkBytes + fileApproxBytes) > MAX_CHUNK_BYTES) {
+          const percent = Math.round(30 + ((restoredFiles / totalFiles) * 55)) // 30% -> 85%
+          setRestoreProgress(prev => ({
+            ...prev,
+            percent,
+            stage: 'Restoring Document Attachments',
+            detail: `Uploaded ${restoredFiles} of ${totalFiles} documents...`
+          }))
+
+          const fileRes = await fetch('/api/submissions/restore?action=files', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'files', files: currentChunk })
+          })
+
+          if (!fileRes.ok) {
+            const errData = await fileRes.json().catch(() => ({}))
+            throw new Error(errData.error || errData.details || `Failed restoring documents (status ${fileRes.status})`)
+          }
+
+          currentChunk = []
+          currentChunkBytes = 0
+        }
+
+        currentChunk.push(fileObj)
+        currentChunkBytes += fileApproxBytes
+        restoredFiles++
+      }
+
+      if (currentChunk.length > 0) {
+        setRestoreProgress(prev => ({
+          ...prev,
+          percent: 85,
+          stage: 'Restoring Document Attachments',
+          detail: `Uploaded ${totalFiles} of ${totalFiles} documents...`
+        }))
+
+        const fileRes = await fetch('/api/submissions/restore?action=files', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'files', files: currentChunk })
+        })
+
+        if (!fileRes.ok) {
+          const errData = await fileRes.json().catch(() => ({}))
+          throw new Error(errData.error || errData.details || `Failed restoring documents (status ${fileRes.status})`)
+        }
+      }
+    }
+
+    // Stage 4: Finalize & reset sequence counters
+    setRestoreProgress(prev => ({
+      ...prev,
+      percent: 92,
+      stage: 'Finalizing Database Restore',
+      detail: 'Resetting database sequence indices and locking changes...'
+    }))
+
+    const finalRes = await fetch('/api/submissions/restore?action=finalize', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'finalize' })
+    })
+
+    if (!finalRes.ok) {
+      const errData = await finalRes.json().catch(() => ({}))
+      throw new Error(errData.error || errData.details || `Failed finalizing restore (status ${finalRes.status})`)
+    }
+
+    // Stage 5: Reload dashboard
+    setRestoreProgress(prev => ({
+      ...prev,
+      percent: 98,
+      stage: 'Refreshing Dashboard View',
+      detail: 'Database restore committed. Reloading live records...'
+    }))
+
+    await loadSubmissions(false)
+
+    setRestoreProgress(prev => ({
+      ...prev,
+      percent: 100,
+      stage: 'Restore Completed Successfully!',
+      detail: `Successfully restored ${totalSubmissions} submissions and ${totalFiles} attached files into the database.`,
+      error: null
+    }))
+
+    setTimeout(() => {
+      setRestoreProgress(prev => prev.error ? prev : { ...prev, active: false })
+      showModal(
+        'success',
+        'Restore Successful',
+        `The database has been successfully restored (${totalSubmissions} submissions and ${totalFiles} attached documents).`
+      )
+    }, 1200)
+  }
+
   const confirmRestore = () => {
     if (!restoreFile) return
     const fileToRestore = restoreFile
@@ -194,9 +357,9 @@ export default function Dashboard() {
 
     setRestoreProgress({
       active: true,
-      percent: 15,
+      percent: 5,
       stage: 'Reading Backup File',
-      detail: `Reading "${fileToRestore.name}" (${(fileToRestore.size / 1024).toFixed(1)} KB)...`,
+      detail: `Reading "${fileToRestore.name}" (${(fileToRestore.size / (1024 * 1024)).toFixed(2)} MB)...`,
       error: null
     })
 
@@ -216,7 +379,7 @@ export default function Dashboard() {
       try {
         setRestoreProgress(prev => ({
           ...prev,
-          percent: 35,
+          percent: 8,
           stage: 'Validating & Parsing Data',
           detail: 'Parsing JSON structure and validating records...'
         }))
@@ -252,67 +415,8 @@ export default function Dashboard() {
             : (sub.data !== undefined ? (typeof sub.data === 'string' ? sub.data : JSON.stringify(sub.data)) : JSON.stringify(sub))
         }))
 
-        const payload = {
-          version: parsed.version || '1.0',
-          timestamp: parsed.timestamp || new Date().toISOString(),
-          submissions: normalizedSubmissions,
-          files: files
-        }
-
-        const payloadString = JSON.stringify(payload)
-        const payloadSizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(2)
-
-        setRestoreProgress(prev => ({
-          ...prev,
-          percent: 65,
-          stage: 'Restoring Database Records',
-          detail: `Transmitting ${normalizedSubmissions.length} submissions and ${files.length} attached documents (${payloadSizeMB} MB)...`
-        }))
-
-        const res = await fetch('/api/submissions/restore', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: payloadString
-        })
-
-        if (!res.ok) {
-          let errorMsg = `Server error ${res.status}: ${res.statusText}`
-          try {
-            const errData = await res.json()
-            if (errData.error || errData.details) {
-              errorMsg = `${errData.error || 'Restore failed'}${errData.details ? `: ${errData.details}` : ''}`
-            }
-          } catch (parseErr) {
-            if (res.status === 413) {
-              errorMsg = `Backup payload is too large (${payloadSizeMB} MB) for the serverless function limit.`
-            } else if (res.status === 504) {
-              errorMsg = 'Database connection timed out during restore.'
-            }
-          }
-          throw new Error(errorMsg)
-        }
-
-        setRestoreProgress(prev => ({
-          ...prev,
-          percent: 90,
-          stage: 'Refreshing Dashboard View',
-          detail: 'Database restore committed. Reloading live records...'
-        }))
-
-        await loadSubmissions(false) // Reload silently
-
-        setRestoreProgress(prev => ({
-          ...prev,
-          percent: 100,
-          stage: 'Restore Completed Successfully!',
-          detail: `Successfully restored ${normalizedSubmissions.length} submissions and ${files.length} attached files into the database.`,
-          error: null
-        }))
-
-        setTimeout(() => {
-          setRestoreProgress(prev => prev.error ? prev : { ...prev, active: false })
-          showModal('success', 'Restore Successful', `The database has been successfully restored (${normalizedSubmissions.length} submissions restored).`)
-        }, 1200)
+        // Execute robust chunked restore!
+        await performChunkedRestore(normalizedSubmissions, files)
 
       } catch (err) {
         setRestoreProgress(prev => ({
@@ -491,9 +595,9 @@ export default function Dashboard() {
 
     setRestoreProgress({
       active: true,
-      percent: 20,
+      percent: 5,
       stage: 'Preparing Merged Dataset',
-      detail: 'Consolidating and validating backup files...',
+      detail: 'Consolidating and validating selected backup files...',
       error: null
     })
 
@@ -503,65 +607,8 @@ export default function Dashboard() {
         throw new Error('No valid submissions found to restore across selected files.')
       }
 
-      const payloadString = JSON.stringify(merged)
-      const payloadSizeMB = (new Blob([payloadString]).size / (1024 * 1024)).toFixed(2)
-
-      setRestoreProgress(prev => ({
-        ...prev,
-        percent: 60,
-        stage: 'Restoring Database Records',
-        detail: `Transmitting ${merged.submissions.length} merged submissions and ${merged.files.length} attached documents (${payloadSizeMB} MB)...`
-      }))
-
-      const res = await fetch('/api/submissions/restore', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: payloadString
-      })
-
-      if (!res.ok) {
-        let errorMsg = `Server error ${res.status}: ${res.statusText}`
-        try {
-          const errData = await res.json()
-          if (errData.error || errData.details) {
-            errorMsg = `${errData.error || 'Restore failed'}${errData.details ? `: ${errData.details}` : ''}`
-          }
-        } catch (parseErr) {
-          if (res.status === 413) {
-            errorMsg = `Merged backup payload is too large (${payloadSizeMB} MB) for the serverless limit.`
-          } else if (res.status === 504) {
-            errorMsg = 'Database connection timed out during restore.'
-          }
-        }
-        throw new Error(errorMsg)
-      }
-
-      setRestoreProgress(prev => ({
-        ...prev,
-        percent: 90,
-        stage: 'Refreshing Dashboard View',
-        detail: 'Database restore committed. Updating submissions view...'
-      }))
-
-      await loadSubmissions(false)
+      await performChunkedRestore(merged.submissions, merged.files)
       clearMergeFiles()
-
-      setRestoreProgress(prev => ({
-        ...prev,
-        percent: 100,
-        stage: 'Merged Restore Completed!',
-        detail: `Successfully restored ${merged.submissions.length} submissions and ${merged.files.length} attached files into the database.`,
-        error: null
-      }))
-
-      setTimeout(() => {
-        setRestoreProgress(prev => prev.error ? prev : { ...prev, active: false })
-        showModal(
-          'success',
-          'Database Restored with Merged Data!',
-          `Successfully restored ${merged.submissions.length} submissions and ${merged.files.length} attached files into the database.`
-        )
-      }, 1200)
 
     } catch (err) {
       setRestoreProgress(prev => ({
