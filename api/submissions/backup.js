@@ -3,7 +3,7 @@ const { Client } = pkg
 
 const createClient = () => {
     return new Client({
-        connectionString: process.env.DATABASE_URL,
+        connectionString: process.env.DATABASE_URL || 'postgresql://postgres.kkuwgmttbekyxsvpmrrw:Midebobo123%@aws-1-eu-west-2.pooler.supabase.com:5432/postgres',
         ssl: { rejectUnauthorized: false }
     })
 }

@@ -184,7 +184,32 @@ export default function Dashboard() {
     const reader = new FileReader()
     reader.onload = async (e) => {
       try {
-        const payload = JSON.parse(e.target.result)
+        const parsed = JSON.parse(e.target.result)
+        let submissions = []
+        let files = []
+
+        if (Array.isArray(parsed)) {
+          submissions = parsed
+        } else if (parsed && typeof parsed === 'object') {
+          submissions = Array.isArray(parsed.submissions) ? parsed.submissions : []
+          files = Array.isArray(parsed.files) ? parsed.files : []
+        }
+
+        const normalizedSubmissions = submissions.map((sub, index) => ({
+          id: sub.id !== undefined ? sub.id : index + 1,
+          created_at: sub.created_at || sub.createdAt || new Date().toISOString(),
+          data_json: sub.data_json !== undefined
+            ? (typeof sub.data_json === 'string' ? sub.data_json : JSON.stringify(sub.data_json))
+            : (sub.data !== undefined ? (typeof sub.data === 'string' ? sub.data : JSON.stringify(sub.data)) : JSON.stringify(sub))
+        }))
+
+        const payload = {
+          version: parsed.version || '1.0',
+          timestamp: parsed.timestamp || new Date().toISOString(),
+          submissions: normalizedSubmissions,
+          files: files
+        }
+
         const res = await fetch('/api/submissions/restore', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -192,11 +217,11 @@ export default function Dashboard() {
         })
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}))
-          throw new Error(errData.error || 'Failed to restore data')
+          throw new Error(errData.error || errData.details || 'Failed to restore data')
         }
         await loadSubmissions(false) // Reload silently
         setRestoreFile(null)
-        showModal('success', 'Restore Successful', 'The database has been successfully restored from the backup.')
+        showModal('success', 'Restore Successful', `The database has been successfully restored (${normalizedSubmissions.length} submissions restored).`)
       } catch (err) {
         setRestoreFile(null)
         showModal('error', 'Restore Failed', err.message)
